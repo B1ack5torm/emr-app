@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RECEPTION
+  DOCTOR
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum VisitStatus {
+  WAITING
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  visits       Visit[]  @relation("DoctorVisits")
+}
+
+model Patient {
+  id               String    @id @default(cuid())
+  name             String
+  age              Int
+  gender           Gender
+  phone            String?
+  address          String?
+  bloodGroup       String?
+  emergencyContact String?
+  createdAt        DateTime  @default(now())
+  allergies        Allergy[]
+  visits           Visit[]
+}
+
+model Allergy {
+  id        String  @id @default(cuid())
+  name      String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId String
+}
+
+model Visit {
+  id             String         @id @default(cuid())
+  status         VisitStatus    @default(WAITING)
+  chiefComplaint String?
+  bp             String?
+  temperature    String?
+  pulse          String?
+  weight         String?
+  diagnosis      String?
+  doctorNotes    String?
+  signedAt       DateTime?
+  createdAt      DateTime       @default(now())
+  patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId      String
+  doctor         User?          @relation("DoctorVisits", fields: [doctorId], references: [id])
+  doctorId       String?
+  prescriptions  Prescription[]
+  testsOrdered   TestOrder[]
+}
+
+model Prescription {
+  id        String  @id @default(cuid())
+  medicine  String
+  dosage    String?
+  frequency String?
+  duration  String?
+  visit     Visit   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId   String
+}
+
+model TestOrder {
+  id      String @id @default(cuid())
+  name    String
+  visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId String
+}
