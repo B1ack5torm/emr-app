@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Stethoscope } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justRegistered = searchParams.get("registered") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -35,6 +38,12 @@ export default function LoginPage() {
           <div className="font-serif font-bold text-lg">Sunrise EMR</div>
         </div>
 
+        {justRegistered && (
+          <div className="bg-accentSoft text-accentDark text-sm rounded-lg px-3 py-2 mb-4">
+            Account created — sign in below.
+          </div>
+        )}
+
         <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Email</label>
         <input
           type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
@@ -53,7 +62,12 @@ export default function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </button>
 
-        <p className="text-xs text-inkSoft mt-5 leading-relaxed">
+        <p className="text-xs text-inkSoft mt-5 text-center">
+          New staff member?{" "}
+          <Link href="/register" className="text-accentDark font-semibold">Create an account</Link>
+        </p>
+
+        <p className="text-xs text-inkSoft mt-3 leading-relaxed">
           Demo accounts (after seeding):<br />
           reception@hospital.com / password123<br />
           doctor@hospital.com / password123
