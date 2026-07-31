@@ -30,7 +30,7 @@ function LoginForm() {
     const res = await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
     if (res?.error) {
-      setError("Invalid email or password.");
+      setError(res.error === "CredentialsSignin" ? "Invalid email or password." : res.error);
     } else {
       router.push("/");
     }
@@ -43,7 +43,7 @@ function LoginForm() {
           <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
             <Stethoscope size={18} color="#fff" />
           </div>
-          <div className="font-serif font-bold text-lg">Sunrise EMR</div>
+          <div className="font-serif font-bold text-lg">CareChart</div>
         </div>
 
         {justRegistered && (
@@ -53,16 +53,10 @@ function LoginForm() {
         )}
 
         <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Email</label>
-        <input
-          type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-          className="w-full border border-border rounded-lg px-3 py-2 mb-4 bg-[#FCFAF5]"
-        />
+        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 mb-4 bg-[#FCFAF5]" />
 
         <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Password</label>
-        <input
-          type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-          className="w-full border border-border rounded-lg px-3 py-2 mb-4 bg-[#FCFAF5]"
-        />
+        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 mb-4 bg-[#FCFAF5]" />
 
         {error && <div className="text-alert text-sm mb-3">{error}</div>}
 
@@ -71,12 +65,12 @@ function LoginForm() {
         </button>
 
         <p className="text-xs text-inkSoft mt-5 text-center">
-          New staff member?{" "}
-          <Link href="/register" className="text-accentDark font-semibold">Create an account</Link>
+          New here? <Link href="/register" className="text-accentDark font-semibold">Create an account</Link>
         </p>
 
         <p className="text-xs text-inkSoft mt-3 leading-relaxed">
           Demo accounts (after seeding):<br />
+          admin@hospital.com / password123<br />
           reception@hospital.com / password123<br />
           doctor@hospital.com / password123
         </p>

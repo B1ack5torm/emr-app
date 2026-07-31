@@ -18,13 +18,24 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: { organization: true },
         });
         if (!user) return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;
 
-        return { id: user.id, name: user.name, email: user.email, role: user.role };
+        if (user.status === "PENDING") throw new Error("Your account is awaiting admin approval.");
+        if (user.status === "REJECTED") throw new Error("Your registration request was declined. Contact your admin.");
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          organizationId: user.organizationId,
+          organizationName: user.organization.name,
+        };
       },
     }),
   ],
@@ -33,6 +44,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.id = (user as any).id;
+        token.organizationId = (user as any).organizationId;
+        token.organizationName = (user as any).organizationName;
       }
       return token;
     },
@@ -40,6 +53,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        (session.user as any).organizationId = token.organizationId;
+        (session.user as any).organizationName = token.organizationName;
       }
       return session;
     },

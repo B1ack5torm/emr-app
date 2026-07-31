@@ -3,17 +3,19 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, ClipboardList, FileText, LogOut } from "lucide-react";
+import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck } from "lucide-react";
 
 export default function NavBar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const role = (session?.user as any)?.role;
+  const orgName = (session?.user as any)?.organizationName;
 
   const tabs = [
     { href: "/frontdesk", label: "Front Desk", icon: <ClipboardList size={15} />, roles: ["RECEPTION", "ADMIN"] },
     { href: "/doctor", label: "Doctor's Desk", icon: <Stethoscope size={15} />, roles: ["DOCTOR", "ADMIN"] },
     { href: "/records", label: "Patient Records", icon: <FileText size={15} />, roles: ["RECEPTION", "DOCTOR", "ADMIN"] },
+    { href: "/admin", label: "Admin", icon: <ShieldCheck size={15} />, roles: ["ADMIN"] },
   ];
 
   return (
@@ -24,7 +26,7 @@ export default function NavBar() {
             <Stethoscope size={18} color="#fff" />
           </div>
           <div>
-            <div className="font-serif font-bold text-lg leading-tight">Sunrise Community Hospital</div>
+            <div className="font-serif font-bold text-lg leading-tight">CareChart{orgName ? ` · ${orgName}` : ""}</div>
             <div className="text-xs text-inkSoft font-mono">Electronic Medical Record</div>
           </div>
         </div>

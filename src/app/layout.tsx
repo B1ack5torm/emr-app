@@ -3,8 +3,8 @@ import Providers from "@/components/Providers";
 import NavBar from "@/components/NavBar";
 
 export const metadata = {
-  title: "Sunrise Community Hospital — EMR",
-  description: "Electronic medical record system",
+  title: "CareChart — Electronic Medical Record",
+  description: "Multi-organization electronic medical record system",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
