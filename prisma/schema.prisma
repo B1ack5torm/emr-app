@@ -8,9 +8,15 @@ datasource db {
 }
 
 enum Role {
+  ADMIN
   RECEPTION
   DOCTOR
-  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
 }
 
 enum Gender {
@@ -24,18 +30,30 @@ enum VisitStatus {
   COMPLETED
 }
 
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  users     User[]
+  patients  Patient[]
+}
+
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role
-  createdAt    DateTime @default(now())
-  visits       Visit[]  @relation("DoctorVisits")
+  id             String       @id @default(cuid())
+  name           String
+  email          String       @unique
+  passwordHash   String
+  role           Role?
+  status         UserStatus   @default(PENDING)
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  visits         Visit[]      @relation("DoctorVisits")
 }
 
 model Patient {
-  id               String    @id @default(cuid())
+  id               String       @id @default(cuid())
   name             String
   age              Int
   gender           Gender
@@ -43,7 +61,9 @@ model Patient {
   address          String?
   bloodGroup       String?
   emergencyContact String?
-  createdAt        DateTime  @default(now())
+  createdAt        DateTime     @default(now())
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  organizationId   String
   allergies        Allergy[]
   visits           Visit[]
 }
