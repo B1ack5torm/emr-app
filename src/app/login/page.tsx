@@ -68,12 +68,6 @@ function LoginForm() {
           New here? <Link href="/register" className="text-accentDark font-semibold">Create an account</Link>
         </p>
 
-        <p className="text-xs text-inkSoft mt-3 leading-relaxed">
-          Demo accounts (after seeding):<br />
-          admin@hospital.com / password123<br />
-          reception@hospital.com / password123<br />
-          doctor@hospital.com / password123
-        </p>
       </form>
     </div>
   );
