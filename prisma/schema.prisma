@@ -90,7 +90,7 @@ model Visit {
   createdAt      DateTime       @default(now())
   patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId      String
-  doctor         User?          @relation("DoctorVisits", fields: [doctorId], references: [id])
+  doctor         User?          @relation("DoctorVisits", fields: [doctorId], references: [id], onDelete: SetNull)
   doctorId       String?
   prescriptions  Prescription[]
   testsOrdered   TestOrder[]
