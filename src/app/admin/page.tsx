@@ -1,21 +1,54 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, ShieldCheck, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, ShieldCheck, Clock, Mail, Send } from "lucide-react";
 
 type StaffUser = { id: string; name: string; email: string; role: string | null; status: string; createdAt: string };
+type PendingInvite = { id: string; email: string; role: string; expiresAt: string; createdAt: string };
 
 export default function AdminPage() {
   const [users, setUsers] = useState<StaffUser[]>([]);
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingRoleChoice, setPendingRoleChoice] = useState<Record<string, string>>({});
 
-  const load = () => fetch("/api/admin/users").then((r) => r.json()).then((d) => { setUsers(d); setLoading(false); });
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("RECEPTION");
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const load = () =>
+    Promise.all([
+      fetch("/api/admin/users").then((r) => r.json()),
+      fetch("/api/admin/invites").then((r) => r.json()),
+    ]).then(([u, i]) => { setUsers(u); setInvites(i); setLoading(false); });
 
   useEffect(() => { load(); }, []);
 
   const pending = users.filter((u) => u.status === "PENDING");
   const active = users.filter((u) => u.status === "ACTIVE");
+
+  const sendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError(""); setInviteSuccess("");
+    setSending(true);
+    const res = await fetch("/api/admin/invites", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+    });
+    const data = await res.json();
+    setSending(false);
+    if (!res.ok) { setInviteError(data.error || "Could not send invite."); return; }
+    setInviteSuccess(`Invitation sent to ${inviteEmail}.`);
+    setInviteEmail("");
+    load();
+  };
+
+  const revokeInvite = async (id: string) => {
+    await fetch(`/api/admin/invites/${id}`, { method: "DELETE" });
+    load();
+  };
 
   const approve = async (id: string) => {
     const role = pendingRoleChoice[id] || "RECEPTION";
@@ -31,15 +64,54 @@ export default function AdminPage() {
     load();
   };
 
+  const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
+
   if (loading) return <div className="text-inkSoft">Loading…</div>;
 
   return (
     <div>
       <div className="font-serif text-lg font-semibold mb-1 flex items-center gap-2"><ShieldCheck size={18} /> Admin</div>
-      <p className="text-sm text-inkSoft mb-6">Approve staff requests and manage roles for your organization.</p>
+      <p className="text-sm text-inkSoft mb-6">Invite staff, approve join requests, and manage roles for your organization.</p>
 
       <div className="mb-8">
-        <div className="text-xs font-bold text-inkSoft uppercase mb-2 flex items-center gap-1.5"><Clock size={13} /> Pending requests ({pending.length})</div>
+        <div className="text-xs font-bold text-inkSoft uppercase mb-2 flex items-center gap-1.5"><Mail size={13} /> Invite staff by email</div>
+        <form onSubmit={sendInvite} className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Email</label>
+            <input type="email" required value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="name@example.com" className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Role</label>
+            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm">
+              <option value="RECEPTION">Front Desk</option>
+              <option value="DOCTOR">Doctor</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+          <button disabled={sending} className="flex items-center gap-2 bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg">
+            <Send size={14} /> {sending ? "Sending…" : "Send invite"}
+          </button>
+        </form>
+        {inviteError && <div className="text-alert text-sm mt-2">{inviteError}</div>}
+        {inviteSuccess && <div className="text-accentDark text-sm mt-2">{inviteSuccess}</div>}
+
+        {invites.length > 0 && (
+          <div className="flex flex-col gap-2 mt-3">
+            {invites.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between bg-[#FAF8F2] border border-border rounded-lg px-4 py-2.5 text-sm">
+                <div>
+                  <span className="font-semibold">{inv.email}</span>
+                  <span className="text-inkSoft"> · invited as {roleLabel(inv.role)} · expires {new Date(inv.expiresAt).toLocaleDateString()}</span>
+                </div>
+                <button onClick={() => revokeInvite(inv.id)} className="text-alert text-xs font-semibold">Revoke</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8">
+        <div className="text-xs font-bold text-inkSoft uppercase mb-2 flex items-center gap-1.5"><Clock size={13} /> Pending join requests ({pending.length})</div>
         {pending.length === 0 ? (
           <div className="text-sm text-inkSoft border border-dashed border-border rounded-lg p-4">No pending requests.</div>
         ) : (
@@ -51,8 +123,7 @@ export default function AdminPage() {
                   <div className="text-xs text-inkSoft">{u.email}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <select value={pendingRoleChoice[u.id] || "RECEPTION"} onChange={(e) => setPendingRoleChoice({ ...pendingRoleChoice, [u.id]: e.target.value })}
-                    className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
+                  <select value={pendingRoleChoice[u.id] || "RECEPTION"} onChange={(e) => setPendingRoleChoice({ ...pendingRoleChoice, [u.id]: e.target.value })} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
                     <option value="RECEPTION">Front Desk</option>
                     <option value="DOCTOR">Doctor</option>
                   </select>

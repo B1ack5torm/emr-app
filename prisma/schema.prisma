@@ -37,6 +37,7 @@ model Organization {
   createdAt DateTime  @default(now())
   users     User[]
   patients  Patient[]
+  invites   Invite[]
 }
 
 model User {
@@ -110,4 +111,18 @@ model TestOrder {
   name    String
   visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
   visitId String
+}
+
+model Invite {
+  id             String       @id @default(cuid())
+  email          String
+  role           Role
+  token          String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+
+  @@unique([email, organizationId])
 }
