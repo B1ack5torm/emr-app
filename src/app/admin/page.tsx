@@ -63,6 +63,11 @@ export default function AdminPage() {
     await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "changeRole", role }) });
     load();
   };
+  const deleteUser = async (id: string, name: string) => {
+    if (!confirm(`Remove ${name} from this hospital? They'll lose access immediately.`)) return;
+    await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+    load();
+  };
 
   const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
 
@@ -145,11 +150,16 @@ export default function AdminPage() {
                 <div className="font-semibold text-sm">{u.name}</div>
                 <div className="text-xs text-inkSoft">{u.email}</div>
               </div>
-              <select value={u.role || ""} onChange={(e) => changeRole(u.id, e.target.value)} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
-                <option value="RECEPTION">Front Desk</option>
-                <option value="DOCTOR">Doctor</option>
-                <option value="ADMIN">Admin</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <select value={u.role || ""} onChange={(e) => changeRole(u.id, e.target.value)} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
+                  <option value="RECEPTION">Front Desk</option>
+                  <option value="DOCTOR">Doctor</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+                <button onClick={() => deleteUser(u.id, u.name)} className="text-alert text-xs font-semibold border border-alertSoft rounded-lg px-3 py-1.5">
+                  Remove
+                </button>
+              </div>
             </div>
           ))}
         </div>
