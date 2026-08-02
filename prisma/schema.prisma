@@ -57,6 +57,7 @@ model Patient {
   id               String       @id @default(cuid())
   name             String
   age              Int
+  dateOfBirth      DateTime?
   gender           Gender
   phone            String?
   address          String?
@@ -94,6 +95,7 @@ model Visit {
   doctorId       String?
   prescriptions  Prescription[]
   testsOrdered   TestOrder[]
+  imagingOrders  ImagingOrder[]
 }
 
 model Prescription {
@@ -125,4 +127,37 @@ model Invite {
   acceptedAt     DateTime?
 
   @@unique([email, organizationId])
+}
+
+enum ImagingModality {
+  XRAY
+  CT
+  MRI
+  ULTRASOUND
+  NUCLEAR
+  OTHER
+}
+
+enum OrderStatus {
+  ORDERED
+  SENT
+  ACK_OK
+  ACK_ERROR
+  FAILED
+}
+
+model ImagingOrder {
+  id                   String          @id @default(cuid())
+  accessionNumber      String          @unique
+  modality             ImagingModality
+  procedureDescription String
+  bodyPart             String?
+  status               OrderStatus     @default(ORDERED)
+  hl7Sent              String?
+  hl7AckReceived       String?
+  errorMessage         String?
+  createdAt            DateTime        @default(now())
+  sentAt               DateTime?
+  visit                Visit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId              String
 }

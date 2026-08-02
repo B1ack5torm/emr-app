@@ -121,6 +121,13 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           </div>
         </div>
 
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold text-inkSoft uppercase mb-2">
+            Imaging order (sends HL7 to modality worklist)
+          </div>
+          <ImagingOrderPanel visitId={visit.id} />
+        </div>
+
         <div className="border-t border-border pt-4">
           <div className="text-xs font-bold text-inkSoft uppercase mb-2">Doctor's signature</div>
           <div className="text-sm mb-2">Signing as <b>{session?.user?.name}</b></div>
@@ -136,6 +143,69 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
         </div>
       </div>
       <style jsx>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
+    </div>
+  );
+}
+
+function ImagingOrderPanel({ visitId }: { visitId: string }) {
+  const [modality, setModality] = useState("XRAY");
+  const [procedureDescription, setProcedureDescription] = useState("");
+  const [bodyPart, setBodyPart] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const send = async () => {
+    setSending(true);
+    setResult(null);
+    const res = await fetch(`/api/visits/${visitId}/imaging-orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modality, procedureDescription, bodyPart }),
+    });
+    const data = await res.json();
+    setSending(false);
+    setResult(data);
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-4">
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        <select value={modality} onChange={(e) => setModality(e.target.value)} className="imgInput">
+          <option value="XRAY">X-Ray</option>
+          <option value="CT">CT</option>
+          <option value="MRI">MRI</option>
+          <option value="ULTRASOUND">Ultrasound</option>
+        </select>
+        <input placeholder="Procedure (e.g. Cervical Spine 2 Views)" value={procedureDescription} onChange={(e) => setProcedureDescription(e.target.value)} className="imgInput" />
+        <input placeholder="Body part (optional)" value={bodyPart} onChange={(e) => setBodyPart(e.target.value)} className="imgInput" />
+      </div>
+      <button onClick={send} disabled={sending || !procedureDescription} className="bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg">
+        {sending ? "Sending…" : "Send order to modality worklist"}
+      </button>
+
+      {result?.order && (
+        <div className="mt-3 text-sm">
+          <div>
+            Accession <b>{result.order.accessionNumber}</b> — status:{" "}
+            <span className={result.order.status === "ACK_OK" ? "text-accentDark font-semibold" : "text-alert font-semibold"}>
+              {result.order.status}
+            </span>
+          </div>
+          {result.warning && <div className="text-waiting text-xs mt-1">{result.warning}</div>}
+          {result.error && <div className="text-alert text-xs mt-1">{result.error}</div>}
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs text-inkSoft">View raw HL7</summary>
+            <pre className="text-xs bg-[#FAF8F2] p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{result.order.hl7Sent}</pre>
+            {result.order.hl7AckReceived && (
+              <>
+                <div className="text-xs text-inkSoft mt-2">ACK received:</div>
+                <pre className="text-xs bg-[#FAF8F2] p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{result.order.hl7AckReceived}</pre>
+              </>
+            )}
+          </details>
+        </div>
+      )}
+      <style jsx>{`.imgInput { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
     </div>
   );
 }
