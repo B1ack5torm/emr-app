@@ -15,6 +15,25 @@ function genderCode(gender: string) {
   return "U";
 }
 
+// DICOM standard modality codes expected by InteleShare's OBR-20
+function modalityCode(modality: string) {
+  const map: Record<string, string> = {
+    XRAY: "CR",
+    CT: "CT",
+    MRI: "MR",
+    ULTRASOUND: "US",
+    NUCLEAR: "NM",
+    OTHER: "OT",
+  };
+  return map[modality] || "OT";
+}
+
+function procedureCode(modality: string, description: string) {
+  const prefix = modalityCode(modality);
+  const short = description.trim().split(" ")[0].toUpperCase().slice(0, 8);
+  return `${prefix}-${short}`;
+}
+
 export function buildORM({
   order,
   patient,
@@ -28,14 +47,28 @@ export function buildORM({
   const ts = hl7Timestamp(now);
   const controlId = `${Date.now()}`;
   const dob = patient.dateOfBirth ? hl7Timestamp(patient.dateOfBirth).slice(0, 8) : "";
+  const stationAeTitle = process.env.MWL_STATION_AETITLE || "";
 
-  const segments = [
-    `MSH|^~\\&|CARECHART|${orgName.replace(/[|^~]/g, "")}|MWL|MWL|${ts}||ORM^O01|${controlId}|P|2.3`,
-    `PID|1||${patient.id}||${lastFirst(patient.name)}||${dob}|${genderCode(patient.gender)}`,
-    `PV1|1|O`,
-    `ORC|NW|${order.accessionNumber}|||||||${ts}`,
-    `OBR|1|${order.accessionNumber}||${order.modality}^${order.procedureDescription}${order.bodyPart ? " - " + order.bodyPart : ""}|||${ts}`,
-  ];
+  const procId = procedureCode(order.modality, order.procedureDescription);
+  const procDesc = order.bodyPart ? `${order.procedureDescription} - ${order.bodyPart}` : order.procedureDescription;
 
-  return segments.join("\r") + "\r";
+  const msh = `MSH|^~\\&|CARECHART|${orgName.replace(/[|^~]/g, "")}|MWL|MWL|${ts}||ORM^O01|${controlId}|P|2.3`;
+  const pid = `PID|1||${patient.id}||${lastFirst(patient.name)}||${dob}|${genderCode(patient.gender)}`;
+  const pv1 = `PV1|1|O`;
+
+  // ORC-3 = accession number (filler order number) — this is what Ambra actually links on
+  const orc = `ORC|NW||${order.accessionNumber}||||||${ts}`;
+
+  // OBR fields, built by explicit position (1-indexed) so nothing shifts:
+  // 3=accession, 4=procId^procDesc, 19=station AE title, 20=modality, 27-4=start date/time
+  const obrFields: string[] = new Array(27).fill("");
+  obrFields[0] = "1";
+  obrFields[2] = order.accessionNumber;
+  obrFields[3] = `${procId}^${procDesc}`;
+  obrFields[18] = stationAeTitle;
+  obrFields[19] = modalityCode(order.modality);
+  obrFields[26] = `^^^${ts}`;
+  const obr = `OBR|${obrFields.join("|")}`;
+
+  return [msh, pid, pv1, orc, obr].join("\r") + "\r";
 }
