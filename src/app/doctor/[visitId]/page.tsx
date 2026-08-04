@@ -56,7 +56,10 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       <div className="flex justify-between items-start mb-3">
         <div>
           <div className="font-serif text-xl font-semibold">{visit.patient.name}</div>
-          <div className="text-xs text-inkSoft">{visit.patient.age} yrs · {visit.patient.gender} · {visit.patient.bloodGroup || "blood group n/a"} · {visit.patient.phone || "—"}</div>
+          <div className="text-xs text-inkSoft">
+            {visit.patient.age} yrs · {visit.patient.gender} · {visit.patient.bloodGroup || "blood group n/a"} · {visit.patient.phone || "—"}
+            {visit.patient.dateOfBirth ? ` · DOB ${new Date(visit.patient.dateOfBirth).toLocaleDateString()}` : ""}
+          </div>
         </div>
         <button onClick={() => router.push("/doctor")} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back to queue</button>
       </div>

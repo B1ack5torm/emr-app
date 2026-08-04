@@ -54,6 +54,7 @@ export default function RecordsPage() {
                 <div className="px-4 pb-4">
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div><b>Phone:</b> {detail.phone || "—"}</div>
+                    <div><b>Date of birth:</b> {detail.dateOfBirth ? new Date(detail.dateOfBirth).toLocaleDateString() : "—"}</div>
                     <div><b>Blood group:</b> {detail.bloodGroup || "—"}</div>
                     <div><b>Address:</b> {detail.address || "—"}</div>
                     <div><b>Emergency contact:</b> {detail.emergencyContact || "—"}</div>

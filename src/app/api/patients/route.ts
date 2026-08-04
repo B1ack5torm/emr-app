@@ -26,13 +26,16 @@ export async function POST(req: NextRequest) {
   const organizationId = (session.user as any).organizationId;
 
   const body = await req.json();
-  const { name, age, gender, phone, address, bloodGroup, emergencyContact, allergies } = body;
+  const { name, age, gender, phone, address, bloodGroup, emergencyContact, dateOfBirth, allergies } = body;
 
   if (!name || !age || !gender) return NextResponse.json({ error: "name, age and gender are required" }, { status: 400 });
 
   const patient = await prisma.patient.create({
-    data: { name, age: Number(age), gender, phone, address, bloodGroup, emergencyContact, organizationId,
-      allergies: { create: (allergies || []).map((a: string) => ({ name: a })) } },
+    data: {
+      name, age: Number(age), gender, phone, address, bloodGroup, emergencyContact, organizationId,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      allergies: { create: (allergies || []).map((a: string) => ({ name: a })) }
+    },
     include: { allergies: true },
   });
 

@@ -67,11 +67,23 @@ export default function FrontDeskPage() {
   );
 }
 
+function calcAge(dobStr: string) {
+  if (!dobStr) return "";
+  const dob = new Date(dobStr);
+  if (isNaN(dob.getTime())) return "";
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age >= 0 ? String(age) : "";
+}
+
 function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void; onBack: () => void }) {
-  const [form, setForm] = useState({ name: "", age: "", gender: "FEMALE", phone: "", address: "", bloodGroup: "", emergencyContact: "" });
+  const [form, setForm] = useState({ name: "", age: "", gender: "FEMALE", phone: "", dateOfBirth: "", address: "", bloodGroup: "", emergencyContact: "" });
   const [allergies, setAllergies] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const setDob = (v: string) => setForm((f) => ({ ...f, dateOfBirth: v, age: v ? calcAge(v) : f.age }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,10 +101,11 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
         <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back</button>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
-        <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
-        <F label="Gender"><select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
-        <F label="Phone"><input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="input" /></F>
+      <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
+      <F label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(e) => setDob(e.target.value)} className="input" /></F>
+      <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
+      <F label="Gender"><select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
+      <F label="Phone"><input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="input" /></F>
         <F label="Blood group"><input value={form.bloodGroup} onChange={(e) => set("bloodGroup", e.target.value)} className="input" /></F>
         <F label="Emergency contact"><input value={form.emergencyContact} onChange={(e) => set("emergencyContact", e.target.value)} className="input" /></F>
         <div className="col-span-2"><F label="Address"><input value={form.address} onChange={(e) => set("address", e.target.value)} className="input" /></F></div>
