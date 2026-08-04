@@ -43,9 +43,10 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
   const save = async (complete: boolean) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
+    const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: tests, complete }),
+      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete }),
     });
     if (res.ok) router.push("/doctor");
     else setError("Could not save the visit. Please try again.");
@@ -112,6 +113,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           <div className="flex gap-2">
             <input value={testDraft} onChange={(e) => setTestDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTest(); } }}
+              onBlur={addTest}
               placeholder="e.g. Complete Blood Count" className="input flex-1" />
             <button type="button" onClick={addTest} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><Plus size={14} /> Add</button>
           </div>

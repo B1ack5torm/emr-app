@@ -87,9 +87,10 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const finalAllergies = draft.trim() ? [...allergies, draft.trim()] : allergies;
     const res = await fetch("/api/patients", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, age: Number(form.age), allergies }),
+      body: JSON.stringify({ ...form, age: Number(form.age), allergies: finalAllergies }),
     });
     if (res.ok) onCreated(await res.json());
   };
@@ -101,11 +102,11 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
         <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back</button>
       </div>
       <div className="grid grid-cols-2 gap-4">
-      <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
-      <F label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(e) => setDob(e.target.value)} className="input" /></F>
-      <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
-      <F label="Gender"><select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
-      <F label="Phone"><input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="input" /></F>
+        <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
+        <F label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(e) => setDob(e.target.value)} className="input" /></F>
+        <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
+        <F label="Gender"><select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
+        <F label="Phone"><input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="input" /></F>
         <F label="Blood group"><input value={form.bloodGroup} onChange={(e) => set("bloodGroup", e.target.value)} className="input" /></F>
         <F label="Emergency contact"><input value={form.emergencyContact} onChange={(e) => set("emergencyContact", e.target.value)} className="input" /></F>
         <div className="col-span-2"><F label="Address"><input value={form.address} onChange={(e) => set("address", e.target.value)} className="input" /></F></div>
@@ -114,6 +115,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
             <div className="flex gap-2">
               <input value={draft} onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (draft.trim()) { setAllergies([...allergies, draft.trim()]); setDraft(""); } } }}
+                onBlur={() => { if (draft.trim()) { setAllergies((a) => [...a, draft.trim()]); setDraft(""); } }}
                 placeholder="e.g. Penicillin — press Enter" className="input flex-1" />
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
