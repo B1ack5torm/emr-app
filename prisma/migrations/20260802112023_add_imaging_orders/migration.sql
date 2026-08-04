@@ -5,7 +5,7 @@ CREATE TYPE "ImagingModality" AS ENUM ('XRAY', 'CT', 'MRI', 'ULTRASOUND', 'NUCLE
 CREATE TYPE "OrderStatus" AS ENUM ('ORDERED', 'SENT', 'ACK_OK', 'ACK_ERROR', 'FAILED');
 
 -- AlterTable
-ALTER TABLE "Patient" ADD COLUMN     "dateOfBirth" TIMESTAMP(3);
+ALTER TABLE "Patient" ADD COLUMN IF NOT EXISTS "dateOfBirth" TIMESTAMP(3);
 
 -- CreateTable
 CREATE TABLE "ImagingOrder" (
