@@ -38,6 +38,7 @@ model Organization {
   users     User[]
   patients  Patient[]
   invites   Invite[]
+  invoices  Invoice[]
 }
 
 model User {
@@ -51,6 +52,8 @@ model User {
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   visits         Visit[]      @relation("DoctorVisits")
+  invoicesCreated  Invoice[] @relation("InvoiceCreatedBy")
+  paymentsRecorded Payment[] @relation("PaymentRecordedBy")
 }
 
 model Patient {
@@ -68,6 +71,7 @@ model Patient {
   organizationId   String
   allergies        Allergy[]
   visits           Visit[]
+  invoices         Invoice[]
 }
 
 model Allergy {
@@ -96,6 +100,7 @@ model Visit {
   prescriptions  Prescription[]
   testsOrdered   TestOrder[]
   imagingOrders  ImagingOrder[]
+  invoice       Invoice?
 }
 
 model Prescription {
@@ -160,4 +165,76 @@ model ImagingOrder {
   sentAt               DateTime?
   visit                Visit           @relation(fields: [visitId], references: [id], onDelete: Cascade)
   visitId              String
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum ItemCategory {
+  CONSULTATION
+  MEDICINE
+  TEST
+  IMAGING
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  BANK_TRANSFER
+  OTHER
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  invoiceNo      Int
+  visit          Visit         @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId        String        @unique
+  patient        Patient       @relation(fields: [patientId], references: [id])
+  patientId      String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organizationId String
+  items          InvoiceItem[]
+  payments       Payment[]
+  subtotal       Int           @default(0)
+  taxTotal       Int           @default(0)
+  grandTotal     Int           @default(0)
+  amountPaid     Int           @default(0)
+  status         InvoiceStatus @default(UNPAID)
+  createdAt      DateTime      @default(now())
+  createdBy      User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById    String?
+
+  @@unique([organizationId, invoiceNo])
+}
+
+model InvoiceItem {
+  id             String       @id @default(cuid())
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId      String
+  category       ItemCategory
+  description    String
+  quantity       Int          @default(1)
+  unitPrice      Int          @default(0)
+  taxRatePercent Int          @default(0)
+  amount         Int          @default(0)
+  taxAmount      Int          @default(0)
+  total          Int          @default(0)
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId    String
+  amount       Int
+  method       PaymentMethod
+  reference    String?
+  paidAt       DateTime      @default(now())
+  recordedBy   User?         @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  recordedById String?
 }

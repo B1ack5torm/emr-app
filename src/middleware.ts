@@ -15,11 +15,14 @@ export default withAuth(
     if (path.startsWith("/admin") && role !== "ADMIN") {
       return NextResponse.redirect(new URL("/records", req.url));
     }
+    if (path.startsWith("/billing") && !["RECEPTION", "ADMIN"].includes(role || "")) {
+      return NextResponse.redirect(new URL("/records", req.url));
+    }
     return NextResponse.next();
   },
   { callbacks: { authorized: ({ token }) => !!token } }
 );
 
 export const config = {
-  matcher: ["/frontdesk/:path*", "/doctor/:path*", "/records/:path*", "/admin/:path*"],
+  matcher: ["/frontdesk/:path*", "/doctor/:path*", "/records/:path*", "/admin/:path*", "/billing/:path*"],
 };

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const visits = await prisma.visit.findMany({
     where: { patient: { organizationId }, ...(status ? { status: status as any } : {}) },
-    include: { patient: { include: { allergies: true } } },
+    include: { patient: { include: { allergies: true } }, invoice: { select: { id: true } } },
     orderBy: { createdAt: "asc" },
   });
 

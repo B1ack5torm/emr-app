@@ -9,3 +9,9 @@ body {
   color: #22303A;
   font-family: 'IBM Plex Sans', sans-serif;
 }
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+}

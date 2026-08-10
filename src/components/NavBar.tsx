@@ -3,7 +3,7 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck } from "lucide-react";
+import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt } from "lucide-react";
 
 export default function NavBar() {
   const { data: session } = useSession();
@@ -16,10 +16,11 @@ export default function NavBar() {
     { href: "/doctor", label: "Doctor's Desk", icon: <Stethoscope size={15} />, roles: ["DOCTOR", "ADMIN"] },
     { href: "/records", label: "Patient Records", icon: <FileText size={15} />, roles: ["RECEPTION", "DOCTOR", "ADMIN"] },
     { href: "/admin", label: "Admin", icon: <ShieldCheck size={15} />, roles: ["ADMIN"] },
+    { href: "/billing", label: "Billing", icon: <Receipt size={15} />, roles: ["RECEPTION", "ADMIN"] },
   ];
 
   return (
-    <div className="bg-card border-b border-border px-6 py-4">
+    <div className="bg-card border-b border-border px-6 py-4 print:hidden">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
