@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-function computeTotals(items: { quantity: number; unitPrice: number; taxRatePercent: number }[]) {
+function computeTotals<T extends { quantity: number; unitPrice: number; taxRatePercent: number }>(items: T[]) {
   let subtotal = 0, taxTotal = 0;
   const computed = items.map((it) => {
     const amount = it.quantity * it.unitPrice;
