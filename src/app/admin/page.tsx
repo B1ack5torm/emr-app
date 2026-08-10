@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, ShieldCheck, Clock, Mail, Send } from "lucide-react";
+import { CheckCircle2, XCircle, ShieldCheck, Clock, Mail, Send, UserPlus } from "lucide-react";
 
 type StaffUser = { id: string; name: string; email: string; role: string | null; status: string; createdAt: string };
 type PendingInvite = { id: string; email: string; role: string; expiresAt: string; createdAt: string };
@@ -17,6 +17,15 @@ export default function AdminPage() {
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState("");
   const [sending, setSending] = useState(false);
+
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualPassword, setManualPassword] = useState("");
+  const [manualRole, setManualRole] = useState("RECEPTION");
+  const [manualError, setManualError] = useState("");
+  const [manualSuccess, setManualSuccess] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const load = () =>
     Promise.all([
@@ -42,6 +51,22 @@ export default function AdminPage() {
     if (!res.ok) { setInviteError(data.error || "Could not send invite."); return; }
     setInviteSuccess(`Invitation sent to ${inviteEmail}.`);
     setInviteEmail("");
+    load();
+  };
+
+  const createUserManually = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setManualError(""); setManualSuccess("");
+    setCreating(true);
+    const res = await fetch("/api/admin/users", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: manualName, email: manualEmail, password: manualPassword, role: manualRole }),
+    });
+    const data = await res.json();
+    setCreating(false);
+    if (!res.ok) { setManualError(data.error || "Could not create user."); return; }
+    setManualSuccess(`Account created for ${manualEmail} — they'll be asked to set their own password on first login.`);
+    setManualName(""); setManualEmail(""); setManualPassword(""); setManualRole("RECEPTION");
     load();
   };
 
@@ -113,6 +138,44 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+      </div>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-bold text-inkSoft uppercase flex items-center gap-1.5"><UserPlus size={13} /> Add user manually</div>
+          <button onClick={() => setShowManualAdd(!showManualAdd)} className="text-xs font-semibold text-accentDark border border-border rounded-lg px-3 py-1.5">
+            {showManualAdd ? "Cancel" : "+ Add user"}
+          </button>
+        </div>
+
+        {showManualAdd && (
+          <form onSubmit={createUserManually} className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
+            <div className="min-w-[160px]">
+              <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Full name</label>
+              <input required value={manualName} onChange={(e) => setManualName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Email</label>
+              <input type="email" required value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+            </div>
+            <div className="min-w-[140px]">
+              <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Password</label>
+              <input type="password" required minLength={8} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Role</label>
+              <select value={manualRole} onChange={(e) => setManualRole(e.target.value)} className="border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm">
+                <option value="RECEPTION">Front Desk</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <button disabled={creating} className="flex items-center gap-2 bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              <UserPlus size={14} /> {creating ? "Creating…" : "Create account"}
+            </button>
+          </form>
+        )}
+        {manualError && <div className="text-alert text-sm mt-2">{manualError}</div>}
+        {manualSuccess && <div className="text-accentDark text-sm mt-2">{manualSuccess}</div>}
       </div>
 
       <div className="mb-8">

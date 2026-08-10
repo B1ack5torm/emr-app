@@ -35,6 +35,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           organizationId: user.organizationId,
           organizationName: user.organization.name,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -46,6 +47,7 @@ export const authOptions: NextAuthOptions = {
         token.id = (user as any).id;
         token.organizationId = (user as any).organizationId;
         token.organizationName = (user as any).organizationName;
+        token.mustChangePassword = (user as any).mustChangePassword;
       }
       return token;
     },
@@ -55,6 +57,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).organizationId = token.organizationId;
         (session.user as any).organizationName = token.organizationName;
+        (session.user as any).mustChangePassword = token.mustChangePassword;
       }
       return session;
     },
