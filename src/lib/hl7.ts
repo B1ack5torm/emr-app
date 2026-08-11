@@ -47,7 +47,8 @@ export function buildORM({
   const ts = hl7Timestamp(now);
   const controlId = `${Date.now()}`;
   const dob = patient.dateOfBirth ? hl7Timestamp(patient.dateOfBirth).slice(0, 8) : "";
-  const stationAeTitle = process.env.MWL_STATION_AETITLE || "";
+  // OBR-19 is the station AE Title consumed by the MWL server.
+  const stationAeTitle = process.env.MWL_STATION_AETITLE || "DG_HARVESTER";
 
   const procId = procedureCode(order.modality, order.procedureDescription);
   const procDesc = order.bodyPart ? `${order.procedureDescription} - ${order.bodyPart}` : order.procedureDescription;
