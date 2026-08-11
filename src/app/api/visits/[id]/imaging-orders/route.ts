@@ -23,7 +23,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const org = await prisma.organization.findUnique({ where: { id: organizationId } });
-  const accessionNumber = `ACC${Date.now()}${Math.floor(Math.random() * 900 + 100)}`;
+  const timestamp = Date.now().toString(36).toUpperCase().slice(-8);
+  const randomSuffix = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, "0");
+  const accessionNumber = `ACC${timestamp}${randomSuffix}`;
 
   const order = await prisma.imagingOrder.create({
     data: { accessionNumber, modality, procedureDescription, bodyPart, visitId: visit.id, status: "ORDERED" },
