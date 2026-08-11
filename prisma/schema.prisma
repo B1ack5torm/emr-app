@@ -59,6 +59,7 @@ model User {
 
 model Patient {
   id               String       @id @default(cuid())
+  mrn              String
   name             String
   age              Int
   dateOfBirth      DateTime?
@@ -73,6 +74,8 @@ model Patient {
   allergies        Allergy[]
   visits           Visit[]
   invoices         Invoice[]
+
+  @@unique([organizationId, mrn])
 }
 
 model Allergy {

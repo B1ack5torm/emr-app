@@ -28,7 +28,7 @@ export default function RecordsPage() {
     <div>
       <div className="relative max-w-md mb-4">
         <Search size={15} className="absolute left-3 top-3 text-inkSoft" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by patient name or phone"
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by MRN, patient name, or phone"
           className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-[#FCFAF5]" />
       </div>
 
@@ -46,6 +46,7 @@ export default function RecordsPage() {
                     <User size={15} className="text-inkSoft" /> {p.name}
                     {p.allergies.length > 0 && <span className="inline-flex items-center gap-1 bg-alertSoft text-alert px-2 py-0.5 rounded-full text-xs font-semibold"><AlertTriangle size={10} /> Allergies</span>}
                   </div>
+                  <div className="text-xs font-mono text-inkSoft mt-0.5">{p.mrn}</div>
                   <div className="text-xs text-inkSoft mt-0.5">{p.age} yrs · {p.gender} · {p.visits.length} visit{p.visits.length !== 1 ? "s" : ""} on file</div>
                 </div>
                 {isOpen ? <ChevronUp size={18} className="text-inkSoft" /> : <ChevronDown size={18} className="text-inkSoft" />}

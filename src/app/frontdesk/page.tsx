@@ -5,7 +5,7 @@ import { Search, Plus, X, AlertTriangle, ArrowLeft, CheckCircle2 } from "lucide-
 import { F, AllergyBanner } from "@/components/shared";
 
 type Patient = {
-  id: string; name: string; age: number; gender: string; phone?: string;
+  id: string; mrn: string; name: string; age: number; gender: string; phone?: string;
   allergies: { id: string; name: string }[];
 };
 
@@ -42,7 +42,7 @@ export default function FrontDeskPage() {
       <div className="flex flex-col gap-3">
         <div className="relative">
           <Search size={15} className="absolute left-3 top-3 text-inkSoft" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search returning patient by name or phone"
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by MRN, name, or phone"
             className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-[#FCFAF5]" />
         </div>
         <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
@@ -51,6 +51,7 @@ export default function FrontDeskPage() {
               className="cursor-pointer p-3 rounded-lg bg-card border border-border"
               style={{ borderLeft: `4px solid ${p.allergies.length ? "#B5533C" : "#3D6A5C"}` }}>
               <div className="font-semibold text-sm">{p.name}</div>
+              <div className="text-xs font-mono text-inkSoft">{p.mrn}</div>
               <div className="text-xs text-inkSoft">{p.age} yrs · {p.gender} · {p.phone || "no phone on file"}</div>
             </div>
           ))}
@@ -177,4 +178,3 @@ function StartVisit({ patient, onDone, onBack }: { patient: Patient; onDone: () 
     </div>
   );
 }
-

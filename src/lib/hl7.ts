@@ -40,7 +40,7 @@ export function buildORM({
   orgName,
 }: {
   order: { accessionNumber: string; modality: string; procedureDescription: string; bodyPart?: string | null };
-  patient: { id: string; name: string; gender: string; dateOfBirth?: Date | null };
+  patient: { mrn: string; name: string; gender: string; dateOfBirth?: Date | null };
   orgName: string;
 }) {
   const now = new Date();
@@ -53,7 +53,7 @@ export function buildORM({
   const procDesc = order.bodyPart ? `${order.procedureDescription} - ${order.bodyPart}` : order.procedureDescription;
 
   const msh = `MSH|^~\\&|CARECHART|${orgName.replace(/[|^~]/g, "")}|MWL|MWL|${ts}||ORM^O01|${controlId}|P|2.3`;
-  const pid = `PID|1||${patient.id}||${lastFirst(patient.name)}||${dob}|${genderCode(patient.gender)}`;
+  const pid = `PID|1||${patient.mrn}||${lastFirst(patient.name)}||${dob}|${genderCode(patient.gender)}`;
   const pv1 = `PV1|1|O`;
 
   // ORC-3 = accession number (filler order number) — this is what Ambra actually links on
