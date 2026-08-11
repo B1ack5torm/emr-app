@@ -17,6 +17,9 @@ export default withAuth(
     if (path.startsWith("/frontdesk") && !["RECEPTION", "ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
+    if (path.startsWith("/appointments") && !["RECEPTION", "ADMIN"].includes(role || "")) {
+      return NextResponse.redirect(new URL("/records", req.url));
+    }
     if (path.startsWith("/doctor") && !["DOCTOR", "ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
@@ -32,5 +35,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/frontdesk/:path*", "/doctor/:path*", "/records/:path*", "/admin/:path*", "/billing/:path*", "/change-password", "/"],
+  matcher: ["/frontdesk/:path*", "/appointments/:path*", "/doctor/:path*", "/records/:path*", "/admin/:path*", "/billing/:path*", "/change-password", "/"],
 };

@@ -30,6 +30,12 @@ enum VisitStatus {
   COMPLETED
 }
 
+enum AppointmentStatus {
+  SCHEDULED
+  CHECKED_IN
+  CANCELLED
+}
+
 model Organization {
   id        String    @id @default(cuid())
   name      String
@@ -39,6 +45,7 @@ model Organization {
   patients  Patient[]
   invites   Invite[]
   invoices  Invoice[]
+  appointments Appointment[]
 }
 
 model User {
@@ -55,6 +62,7 @@ model User {
   visits             Visit[]      @relation("DoctorVisits")
   invoicesCreated    Invoice[]    @relation("InvoiceCreatedBy")
   paymentsRecorded   Payment[]    @relation("PaymentRecordedBy")
+  appointments      Appointment[] @relation("DoctorAppointments")
 }
 
 model Patient {
@@ -74,6 +82,7 @@ model Patient {
   allergies        Allergy[]
   visits           Visit[]
   invoices         Invoice[]
+  appointments     Appointment[]
 
   @@unique([organizationId, mrn])
 }
@@ -105,6 +114,27 @@ model Visit {
   testsOrdered   TestOrder[]
   imagingOrders  ImagingOrder[]
   invoice       Invoice?
+  appointment   Appointment? @relation("AppointmentVisit", fields: [appointmentId], references: [id])
+  appointmentId String?      @unique
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  scheduledAt    DateTime
+  durationMinutes Int               @default(30)
+  reason         String?
+  status         AppointmentStatus @default(SCHEDULED)
+  createdAt      DateTime          @default(now())
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId      String
+  doctor         User?             @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: SetNull)
+  doctorId       String?
+  visit          Visit?            @relation("AppointmentVisit")
+
+  @@index([organizationId, scheduledAt])
+  @@index([doctorId, scheduledAt])
 }
 
 model Prescription {

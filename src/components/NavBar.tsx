@@ -3,7 +3,7 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt } from "lucide-react";
+import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, CalendarDays } from "lucide-react";
 
 export default function NavBar() {
   const { data: session } = useSession();
@@ -13,6 +13,7 @@ export default function NavBar() {
 
   const tabs = [
     { href: "/frontdesk", label: "Front Desk", icon: <ClipboardList size={15} />, roles: ["RECEPTION", "ADMIN"] },
+    { href: "/appointments", label: "Schedule", icon: <CalendarDays size={15} />, roles: ["RECEPTION", "ADMIN"] },
     { href: "/doctor", label: "Doctor's Desk", icon: <Stethoscope size={15} />, roles: ["DOCTOR", "ADMIN"] },
     { href: "/records", label: "Patient Records", icon: <FileText size={15} />, roles: ["RECEPTION", "DOCTOR", "ADMIN"] },
     { href: "/admin", label: "Admin", icon: <ShieldCheck size={15} />, roles: ["ADMIN"] },
