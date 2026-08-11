@@ -1,4 +1,4 @@
-# Sunrise EMR — starter web app
+# CareChart EMR — starter web app
 
 A real, deployable version of the EMR prototype: Next.js (App Router) + PostgreSQL
 (via Prisma) + NextAuth for staff login, with two roles — Front Desk and Doctor.
