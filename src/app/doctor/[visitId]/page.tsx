@@ -158,6 +158,26 @@ function ImagingOrderPanel({ visitId }: { visitId: string }) {
   const [bodyPart, setBodyPart] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersError, setOrdersError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`/api/visits/${visitId}/imaging-orders`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Could not load imaging orders.");
+        return res.json();
+      })
+      .then((savedOrders) => {
+        if (!cancelled) setOrders(savedOrders);
+      })
+      .catch(() => {
+        if (!cancelled) setOrdersError("Could not load saved imaging orders.");
+      });
+
+    return () => { cancelled = true; };
+  }, [visitId]);
 
   const send = async () => {
     setSending(true);
@@ -170,6 +190,7 @@ function ImagingOrderPanel({ visitId }: { visitId: string }) {
     const data = await res.json();
     setSending(false);
     setResult(data);
+    if (data.order) setOrders((current) => [data.order, ...current.filter((order) => order.id !== data.order.id)]);
   };
 
   return (
@@ -209,6 +230,40 @@ function ImagingOrderPanel({ visitId }: { visitId: string }) {
             )}
           </details>
         </div>
+      )}
+      {ordersError && <div className="text-alert text-xs mt-3">{ordersError}</div>}
+      {orders.length > 0 && (
+        <details className="mt-3" open={Boolean(result?.order)}>
+          <summary className="cursor-pointer text-xs font-semibold text-accentDark">
+            View saved imaging order{orders.length > 1 ? "s" : ""} ({orders.length})
+          </summary>
+          <div className="flex flex-col gap-2 mt-2">
+            {orders.map((order) => (
+              <div key={order.id} className="text-xs bg-[#FAF8F2] border border-border rounded p-2">
+                <div>
+                  <b>{order.modality}</b> — {order.procedureDescription}{order.bodyPart ? ` (${order.bodyPart})` : ""}
+                </div>
+                <div className="text-inkSoft mt-1">
+                  Accession {order.accessionNumber} · Status {order.status}
+                  {order.sentAt ? ` · Sent ${new Date(order.sentAt).toLocaleString()}` : ""}
+                </div>
+                {order.hl7Sent && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-inkSoft">View raw HL7</summary>
+                    <pre className="bg-white p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{order.hl7Sent}</pre>
+                    {order.hl7AckReceived && (
+                      <>
+                        <div className="text-inkSoft mt-2">ACK received:</div>
+                        <pre className="bg-white p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{order.hl7AckReceived}</pre>
+                      </>
+                    )}
+                    {order.errorMessage && <div className="text-alert mt-2">{order.errorMessage}</div>}
+                  </details>
+                )}
+              </div>
+            ))}
+          </div>
+        </details>
       )}
       <style jsx>{`.imgInput { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
     </div>
