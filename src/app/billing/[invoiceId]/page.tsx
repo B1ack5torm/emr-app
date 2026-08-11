@@ -6,6 +6,15 @@ type Item = { category: string; description: string; quantity: number; unitPrice
 const CATEGORIES = ["CONSULTATION", "MEDICINE", "TEST", "IMAGING", "OTHER"];
 const METHODS = ["CASH", "CARD", "UPI", "BANK_TRANSFER", "OTHER"];
 
+function digitsOnly(value: string) {
+  return Number(value.replace(/\D/g, "")) || 0;
+}
+
+function decimalOnly(value: string) {
+  const [whole, ...fraction] = value.replace(/[^\d.]/g, "").split(".");
+  return Number(fraction.length ? `${whole}.${fraction.join("")}` : whole) || 0;
+}
+
 export default function InvoiceDetailPage({ params }: { params: { invoiceId: string } }) {
   const [invoice, setInvoice] = useState<any>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -106,9 +115,9 @@ export default function InvoiceDetailPage({ params }: { params: { invoiceId: str
                   </select>
                 </td>
                 <td className="py-1.5 pr-2"><input disabled={locked} value={it.description} onChange={(e) => updateItem(i, "description", e.target.value)} className="w-full text-sm border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
-                <td className="py-1.5 pr-2 text-right"><input disabled={locked} type="number" min={1} value={it.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} className="w-14 text-right border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
-                <td className="py-1.5 pr-2 text-right"><input disabled={locked} type="number" min={0} step="0.01" value={it.unitPrice} onChange={(e) => updateItem(i, "unitPrice", Number(e.target.value))} className="w-20 text-right border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
-                <td className="py-1.5 pr-2 text-right"><input disabled={locked} type="number" min={0} max={100} value={it.taxRatePercent} onChange={(e) => updateItem(i, "taxRatePercent", Number(e.target.value))} className="w-14 text-right border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
+                <td className="py-1.5 pr-2 text-right"><input disabled={locked} type="text" inputMode="numeric" pattern="[0-9]*" value={it.quantity} onChange={(e) => updateItem(i, "quantity", Math.max(1, digitsOnly(e.target.value)))} className="w-14 text-right border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
+                <td className="py-1.5 pr-2 text-right"><input disabled={locked} type="text" inputMode="decimal" value={it.unitPrice} onChange={(e) => updateItem(i, "unitPrice", decimalOnly(e.target.value))} className="w-20 text-right border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
+                <td className="py-1.5 pr-2 text-right"><input disabled={locked} type="text" inputMode="decimal" value={it.taxRatePercent} onChange={(e) => updateItem(i, "taxRatePercent", Math.min(100, decimalOnly(e.target.value)))} className="w-14 text-right border border-border rounded px-1.5 py-1 bg-[#FCFAF5]" /></td>
                 <td className="py-1.5 pr-2 text-right font-mono">{(it.quantity * it.unitPrice * (1 + it.taxRatePercent / 100)).toFixed(2)}</td>
                 <td className="print:hidden">{!locked && <X size={14} className="cursor-pointer text-inkSoft" onClick={() => removeItem(i)} />}</td>
               </tr>
