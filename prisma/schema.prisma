@@ -11,6 +11,7 @@ enum Role {
   ADMIN
   RECEPTION
   DOCTOR
+  PHARMACIST
 }
 
 enum UserStatus {
@@ -46,6 +47,8 @@ model Organization {
   invites   Invite[]
   invoices  Invoice[]
   appointments Appointment[]
+  pharmacyOrders PharmacyOrder[]
+  pharmacyInvoices PharmacyInvoice[]
 }
 
 model User {
@@ -63,6 +66,7 @@ model User {
   invoicesCreated    Invoice[]    @relation("InvoiceCreatedBy")
   paymentsRecorded   Payment[]    @relation("PaymentRecordedBy")
   appointments      Appointment[] @relation("DoctorAppointments")
+  pharmacyInvoicesCreated PharmacyInvoice[] @relation("PharmacyInvoiceCreatedBy")
 }
 
 model Patient {
@@ -83,6 +87,8 @@ model Patient {
   visits           Visit[]
   invoices         Invoice[]
   appointments     Appointment[]
+  pharmacyOrders   PharmacyOrder[]
+  pharmacyInvoices PharmacyInvoice[]
 
   @@unique([organizationId, mrn])
 }
@@ -114,6 +120,7 @@ model Visit {
   testsOrdered   TestOrder[]
   imagingOrders  ImagingOrder[]
   invoice       Invoice?
+  pharmacyOrder PharmacyOrder?
   appointment   Appointment? @relation("AppointmentVisit", fields: [appointmentId], references: [id])
   appointmentId String?      @unique
 }
@@ -145,6 +152,38 @@ model Prescription {
   duration  String?
   visit     Visit   @relation(fields: [visitId], references: [id], onDelete: Cascade)
   visitId   String
+}
+
+enum PharmacyOrderStatus {
+  PENDING
+  DISPENSED
+}
+
+model PharmacyOrder {
+  id             String              @id @default(cuid())
+  status         PharmacyOrderStatus @default(PENDING)
+  createdAt      DateTime            @default(now())
+  dispensedAt    DateTime?
+  visit          Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId        String              @unique
+  patient        Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId      String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  items          PharmacyOrderItem[]
+  invoice        PharmacyInvoice?
+
+  @@index([organizationId, status])
+}
+
+model PharmacyOrderItem {
+  id              String        @id @default(cuid())
+  medicine        String
+  dosage          String?
+  frequency       String?
+  duration        String?
+  pharmacyOrder   PharmacyOrder @relation(fields: [pharmacyOrderId], references: [id], onDelete: Cascade)
+  pharmacyOrderId String
 }
 
 model TestOrder {
@@ -271,4 +310,37 @@ model Payment {
   paidAt       DateTime      @default(now())
   recordedBy   User?         @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
   recordedById String?
+}
+
+model PharmacyInvoice {
+  id              String        @id @default(cuid())
+  invoiceNo       Int
+  createdAt       DateTime      @default(now())
+  pharmacyOrder   PharmacyOrder @relation(fields: [pharmacyOrderId], references: [id], onDelete: Cascade)
+  pharmacyOrderId String        @unique
+  patient         Patient       @relation(fields: [patientId], references: [id])
+  patientId       String
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  subtotal        Int           @default(0)
+  taxTotal        Int           @default(0)
+  grandTotal      Int           @default(0)
+  createdBy       User?         @relation("PharmacyInvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById     String?
+  items           PharmacyInvoiceItem[]
+
+  @@unique([organizationId, invoiceNo])
+}
+
+model PharmacyInvoiceItem {
+  id                String          @id @default(cuid())
+  invoice           PharmacyInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId         String
+  description       String
+  quantity          Int             @default(1)
+  unitPrice         Int             @default(0)
+  taxRatePercent    Int             @default(0)
+  amount            Int             @default(0)
+  taxAmount         Int             @default(0)
+  total             Int             @default(0)
 }

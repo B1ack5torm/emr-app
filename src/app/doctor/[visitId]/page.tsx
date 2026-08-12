@@ -41,12 +41,12 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const removeRx = (i: number) => setRx(rx.filter((_, idx) => idx !== i));
   const addTest = () => { if (testDraft.trim()) { setTests([...tests, testDraft.trim()]); setTestDraft(""); } };
 
-  const save = async (complete: boolean) => {
+  const save = async (complete: boolean, sendToPharmacy = false) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete }),
+      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete, sendToPharmacy }),
     });
     if (res.ok) router.push("/doctor");
     else setError("Could not save the visit. Please try again.");
@@ -106,6 +106,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             ))}
           </div>
           <button type="button" onClick={addRx} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5 mt-2"><Plus size={14} /> Add medicine</button>
+          <button type="button" onClick={() => save(false, true)} className="flex items-center gap-1 text-sm text-white bg-accent rounded-lg px-3 py-1.5 mt-2 ml-2"><Pill size={14} /> Send to pharmacist queue</button>
         </div>
 
         <div>

@@ -26,6 +26,11 @@ async function main() {
   });
 
   await prisma.user.upsert({
+    where: { email: "pharmacist@hospital.com" }, update: {},
+    create: { name: "Pharmacy User", email: "pharmacist@hospital.com", passwordHash: password, role: "PHARMACIST", status: "ACTIVE", organizationId: org.id },
+  });
+
+  await prisma.user.upsert({
     where: { email: "reception@hospital.com" },
     update: {},
     create: {
@@ -55,6 +60,7 @@ async function main() {
   console.log("  admin@hospital.com / password123 (Admin)");
   console.log("  reception@hospital.com / password123 (Front Desk)");
   console.log("  doctor@hospital.com / password123 (Doctor)");
+  console.log("  pharmacist@hospital.com / password123 (Pharmacist)");
 }
 
 main()

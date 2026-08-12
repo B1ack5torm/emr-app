@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   if (!name || !email || !password || !role) {
     return NextResponse.json({ error: "Name, email, password and role are required." }, { status: 400 });
   }
-  if (!["RECEPTION", "DOCTOR", "ADMIN"].includes(role)) {
+  if (!["RECEPTION", "DOCTOR", "PHARMACIST", "ADMIN"].includes(role)) {
     return NextResponse.json({ error: "Invalid role." }, { status: 400 });
   }
   if (password.length < 8) {

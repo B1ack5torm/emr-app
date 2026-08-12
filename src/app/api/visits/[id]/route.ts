@@ -23,25 +23,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!["DOCTOR", "ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const organizationId = (session.user as any).organizationId;
 
-  const existing = await prisma.visit.findUnique({ where: { id: params.id }, include: { patient: true } });
+  const existing = await prisma.visit.findUnique({ where: { id: params.id }, include: { patient: true, pharmacyOrder: true } });
   if (!existing || existing.patient.organizationId !== organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { diagnosis, doctorNotes, prescriptions, testsOrdered, complete } = body;
+  const { diagnosis, doctorNotes, prescriptions, testsOrdered, complete, sendToPharmacy } = body;
 
-  await prisma.prescription.deleteMany({ where: { visitId: params.id } });
-  await prisma.testOrder.deleteMany({ where: { visitId: params.id } });
+  const prescriptionItems = (prescriptions || []).filter((p: any) => p.medicine?.trim()).map((p: any) => ({ medicine: p.medicine.trim(), dosage: p.dosage?.trim() || null, frequency: p.frequency?.trim() || null, duration: p.duration?.trim() || null }));
+  if (sendToPharmacy && prescriptionItems.length === 0) return NextResponse.json({ error: "Add at least one medicine before sending to pharmacy." }, { status: 400 });
+  if (existing.pharmacyOrder && sendToPharmacy) return NextResponse.json({ error: "This prescription has already been sent to pharmacy." }, { status: 409 });
 
-  const visit = await prisma.visit.update({
+  const visit = await prisma.$transaction(async (tx) => {
+    await tx.prescription.deleteMany({ where: { visitId: params.id } });
+    await tx.testOrder.deleteMany({ where: { visitId: params.id } });
+    const updated = await tx.visit.update({
     where: { id: params.id },
     data: {
       diagnosis, doctorNotes, doctorId: (session.user as any).id,
       status: complete ? "COMPLETED" : "WAITING",
       signedAt: complete ? new Date() : null,
-      prescriptions: { create: (prescriptions || []).filter((p: any) => p.medicine?.trim()).map((p: any) => ({ medicine: p.medicine, dosage: p.dosage, frequency: p.frequency, duration: p.duration })) },
+      prescriptions: { create: prescriptionItems },
       testsOrdered: { create: (testsOrdered || []).map((name: string) => ({ name })) },
     },
     include: { prescriptions: true, testsOrdered: true, doctor: { select: { name: true } } },
+    });
+    if (sendToPharmacy) await tx.pharmacyOrder.create({ data: { visitId: params.id, patientId: existing.patientId, organizationId, items: { create: prescriptionItems } } });
+    return updated;
   });
 
   return NextResponse.json(visit);

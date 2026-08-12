@@ -43,7 +43,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const draftItems = [
     { category: "CONSULTATION" as const, description: `Consultation${visit.chiefComplaint ? " — " + visit.chiefComplaint : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 },
-    ...visit.prescriptions.map((p) => ({ category: "MEDICINE" as const, description: `${p.medicine}${p.dosage ? " " + p.dosage : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
     ...visit.testsOrdered.map((t) => ({ category: "TEST" as const, description: t.name, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
     ...visit.imagingOrders.map((o) => ({ category: "IMAGING" as const, description: `${o.procedureDescription}${o.bodyPart ? " - " + o.bodyPart : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
   ];
