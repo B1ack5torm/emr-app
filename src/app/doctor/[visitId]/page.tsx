@@ -20,6 +20,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [signConfirmed, setSignConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [pastVisits, setPastVisits] = useState<any[]>([]);
+  const [pharmacySent, setPharmacySent] = useState(false);
 
   useEffect(() => {
     fetch(`/api/visits/${params.visitId}`).then((r) => r.json()).then((v) => {
@@ -40,7 +41,6 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const updateRx = (i: number, field: keyof Rx, val: string) => setRx(rx.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)));
   const removeRx = (i: number) => setRx(rx.filter((_, idx) => idx !== i));
   const addTest = () => { if (testDraft.trim()) { setTests([...tests, testDraft.trim()]); setTestDraft(""); } };
-  const [pharmacySent, setPharmacySent] = useState(false);
 
   const save = async (complete: boolean, sendToPharmacy = false) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
