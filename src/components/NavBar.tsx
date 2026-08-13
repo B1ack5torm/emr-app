@@ -12,12 +12,12 @@ export default function NavBar() {
   const orgName = (session?.user as any)?.organizationName;
 
   const tabs = [
-    { href: "/frontdesk", label: "Front Desk", icon: <ClipboardList size={15} />, roles: ["RECEPTION", "ADMIN"] },
-    { href: "/appointments", label: "Schedule", icon: <CalendarDays size={15} />, roles: ["RECEPTION", "ADMIN"] },
-    { href: "/doctor", label: "Doctor's Desk", icon: <Stethoscope size={15} />, roles: ["DOCTOR", "ADMIN"] },
-    { href: "/records", label: "Patient Records", icon: <FileText size={15} />, roles: ["RECEPTION", "DOCTOR", "ADMIN"] },
-    { href: "/admin", label: "Admin", icon: <ShieldCheck size={15} />, roles: ["ADMIN"] },
-    { href: "/billing", label: "Billing", icon: <Receipt size={15} />, roles: ["RECEPTION", "ADMIN"] },
+    { href: "/frontdesk", label: "Front Desk", icon: <ClipboardList size={15} />, roles: ["RECEPTION", "ADMIN", "SUPER_ADMIN"] },
+    { href: "/appointments", label: "Schedule", icon: <CalendarDays size={15} />, roles: ["RECEPTION", "ADMIN", "SUPER_ADMIN"] },
+    { href: "/doctor", label: "Doctor's Desk", icon: <Stethoscope size={15} />, roles: ["DOCTOR", "ADMIN", "SUPER_ADMIN"] },
+    { href: "/records", label: "Patient Records", icon: <FileText size={15} />, roles: ["RECEPTION", "DOCTOR", "ADMIN", "SUPER_ADMIN"] },
+    { href: "/admin", label: "Admin", icon: <ShieldCheck size={15} />, roles: ["ADMIN", "SUPER_ADMIN"] },
+    { href: "/billing", label: "Billing", icon: <Receipt size={15} />, roles: ["RECEPTION", "ADMIN", "SUPER_ADMIN"] },
   ];
 
   return (

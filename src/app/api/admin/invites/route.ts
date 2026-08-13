@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!["ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const invites = await prisma.invite.findMany({
     where: { organizationId: (session.user as any).organizationId, acceptedAt: null },
@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!["ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { email, role } = await req.json();
   if (!email || !role) return NextResponse.json({ error: "Email and role are required." }, { status: 400 });

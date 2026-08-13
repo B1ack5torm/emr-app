@@ -6,11 +6,12 @@ import { prisma } from "@/lib/prisma";
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!["ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const orgId = (session.user as any).organizationId;
+  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
   const target = await prisma.user.findUnique({ where: { id: params.id } });
-  if (!target || target.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!target || (!isSuperAdmin && target.organizationId !== orgId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
 
@@ -34,11 +35,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if ((session.user as any).role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!["ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const orgId = (session.user as any).organizationId;
+  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
   const target = await prisma.user.findUnique({ where: { id: params.id } });
-  if (!target || target.organizationId !== orgId) {
+  if (!target || (!isSuperAdmin && target.organizationId !== orgId)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (target.id === (session.user as any).id) {

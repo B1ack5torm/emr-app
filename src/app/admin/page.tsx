@@ -10,6 +10,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [pendingRoleChoice, setPendingRoleChoice] = useState<Record<string, string>>({});
 
   const [inviteEmail, setInviteEmail] = useState("");
@@ -27,11 +28,28 @@ export default function AdminPage() {
   const [manualSuccess, setManualSuccess] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const load = () =>
-    Promise.all([
-      fetch("/api/admin/users").then((r) => r.json()),
-      fetch("/api/admin/invites").then((r) => r.json()),
-    ]).then(([u, i]) => { setUsers(u); setInvites(i); setLoading(false); });
+  const readJson = async (response: Response) => {
+    const body = await response.text();
+    const data = body ? JSON.parse(body) : {};
+    if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+    return data;
+  };
+
+  const load = async () => {
+    setLoadError("");
+    try {
+      const [u, i] = await Promise.all([
+        fetch("/api/admin/users").then(readJson),
+        fetch("/api/admin/invites").then(readJson),
+      ]);
+      setUsers(u);
+      setInvites(i);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not load administration data.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -97,6 +115,7 @@ export default function AdminPage() {
   const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
 
   if (loading) return <div className="text-inkSoft">Loading…</div>;
+  if (loadError) return <div className="bg-alertSoft text-alert border border-alertSoft rounded-lg p-4 text-sm">Could not load the Admin page: {loadError} <button onClick={load} className="ml-2 underline font-semibold">Try again</button></div>;
 
   return (
     <div>

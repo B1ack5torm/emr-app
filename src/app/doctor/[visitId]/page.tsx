@@ -19,7 +19,6 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [tests, setTests] = useState<string[]>([]);
   const [testDraft, setTestDraft] = useState("");
   const [signConfirmed, setSignConfirmed] = useState(false);
-  const [reportPrinted, setReportPrinted] = useState(false);
   const [error, setError] = useState("");
   const [pastVisits, setPastVisits] = useState<any[]>([]);
 
@@ -46,7 +45,6 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
   const save = async (complete: boolean) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
-    if (complete && !reportPrinted) { setError("Print the patient report before completing the visit."); return; }
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -54,6 +52,11 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     });
     if (res.ok) {
       const saved = await res.json();
+      if (complete) {
+        router.replace("/doctor");
+        router.refresh();
+        return;
+      }
       setVisit((current: any) => ({ ...current, ...saved, patient: current.patient }));
       setRx(saved.prescriptions || rx);
       setTests((saved.testsOrdered || []).map((test: any) => test.name));
@@ -63,7 +66,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   };
 
   const completed = visit.status === "COMPLETED";
-  const printReport = () => { setReportPrinted(true); setError(""); window.print(); };
+  const printReport = () => { setError(""); window.print(); };
 
   return (
     <div>
@@ -160,11 +163,10 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             <input type="checkbox" checked={signConfirmed} onChange={(e) => setSignConfirmed(e.target.checked)} />
             I confirm this consultation record is accurate and digitally sign it.
           </label>
-          {!reportPrinted && <div className="text-xs text-inkSoft mt-2">Print the patient report before completing this visit.</div>}
           {error && <div className="text-alert text-sm mt-2">{error}</div>}
           <div className="flex gap-2.5 mt-4 justify-end">
             <button onClick={() => save(false)} className="text-sm text-accentDark border border-border rounded-lg px-4 py-2.5 font-semibold">Save draft</button>
-            <button onClick={() => save(true)} disabled={!reportPrinted} className="flex items-center gap-2 bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><CheckCircle2 size={15} /> Complete &amp; sign visit</button>
+            <button onClick={() => save(true)} className="flex items-center gap-2 bg-accent text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><CheckCircle2 size={15} /> Complete &amp; sign visit</button>
           </div>
         </div>
       </div>

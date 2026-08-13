@@ -14,19 +14,19 @@ export default withAuth(
       return NextResponse.redirect(new URL("/", req.url));
     }
 
-    if (path.startsWith("/frontdesk") && !["RECEPTION", "ADMIN"].includes(role || "")) {
+    if (path.startsWith("/frontdesk") && !["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
-    if (path.startsWith("/appointments") && !["RECEPTION", "ADMIN"].includes(role || "")) {
+    if (path.startsWith("/appointments") && !["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
-    if (path.startsWith("/doctor") && !["DOCTOR", "ADMIN"].includes(role || "")) {
+    if (path.startsWith("/doctor") && !["DOCTOR", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
-    if (path.startsWith("/admin") && role !== "ADMIN") {
+    if (path.startsWith("/admin") && !["ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
-    if (path.startsWith("/billing") && !["RECEPTION", "ADMIN"].includes(role || "")) {
+    if (path.startsWith("/billing") && !["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL("/records", req.url));
     }
     return NextResponse.next();

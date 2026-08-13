@@ -8,12 +8,14 @@ type Patient = {
   id: string; mrn: string; name: string; age: number; gender: string; phone?: string;
   allergies: { id: string; name: string }[];
 };
+type Doctor = { id: string; name: string };
 
 export default function FrontDeskPage() {
   const [mode, setMode] = useState<"search" | "new" | "visit">("search");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -34,8 +36,8 @@ export default function FrontDeskPage() {
     );
   }
 
-  if (mode === "new") return <NewPatientForm onCreated={(p) => { setSelected(p); setMode("visit"); }} onBack={() => setMode("search")} />;
-  if (mode === "visit" && selected) return <StartVisit patient={selected} onDone={() => { setSaved(true); setTimeout(() => { setSaved(false); setMode("search"); setSelected(null); setQuery(""); }, 1400); }} onBack={() => setMode("search")} />;
+  if (mode === "new") return <NewPatientForm onCreated={(p, doctorId) => { setSelected(p); setSelectedDoctorId(doctorId); setMode("visit"); }} onBack={() => setMode("search")} />;
+  if (mode === "visit" && selected) return <StartVisit patient={selected} doctorId={selectedDoctorId} onDone={() => { setSaved(true); setTimeout(() => { setSaved(false); setMode("search"); setSelected(null); setSelectedDoctorId(""); setQuery(""); }, 1400); }} onBack={() => setMode("search")} />;
 
   return (
     <div className="grid grid-cols-[340px_1fr] gap-5">
@@ -79,12 +81,21 @@ function calcAge(dobStr: string) {
   return age >= 0 ? String(age) : "";
 }
 
-function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void; onBack: () => void }) {
-  const [form, setForm] = useState({ name: "", age: "", gender: "FEMALE", phone: "", dateOfBirth: "", address: "", bloodGroup: "", emergencyContact: "" });
+function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorId: string) => void; onBack: () => void }) {
+  const [form, setForm] = useState({ name: "", age: "", gender: "", doctorId: "", phone: "", email: "", dateOfBirth: "", address: "", bloodGroup: "", emergencyContact: "" });
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [error, setError] = useState("");
   const [allergies, setAllergies] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const setDob = (v: string) => setForm((f) => ({ ...f, dateOfBirth: v, age: v ? calcAge(v) : f.age }));
+
+  useEffect(() => {
+    fetch("/api/doctors").then(async (res) => {
+      if (res.ok) setDoctors(await res.json());
+      else setError("Could not load the doctor list.");
+    }).catch(() => setError("Could not load the doctor list."));
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +104,8 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, age: Number(form.age), allergies: finalAllergies }),
     });
-    if (res.ok) onCreated(await res.json());
+    if (res.ok) onCreated(await res.json(), form.doctorId);
+    else setError((await res.json()).error || "Could not register the patient.");
   };
 
   return (
@@ -103,11 +115,14 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
         <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back</button>
       </div>
       <div className="grid grid-cols-2 gap-4">
+        {error && <div className="col-span-2 text-alert text-sm">{error}</div>}
         <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
         <F label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(e) => setDob(e.target.value)} className="input" /></F>
         <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
-        <F label="Gender"><select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
+        <F label="Gender" required><select required value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="" disabled>Select gender</option><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
+        <F label="Doctor" required><select required value={form.doctorId} onChange={(e) => set("doctorId", e.target.value)} className="input"><option value="" disabled>Select doctor</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>Dr. {doctor.name}</option>)}</select></F>
         <F label="Phone"><input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="input" /></F>
+        <F label="Email"><input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" /></F>
         <F label="Blood group"><input value={form.bloodGroup} onChange={(e) => set("bloodGroup", e.target.value)} className="input" /></F>
         <F label="Emergency contact"><input value={form.emergencyContact} onChange={(e) => set("emergencyContact", e.target.value)} className="input" /></F>
         <div className="col-span-2"><F label="Address"><input value={form.address} onChange={(e) => set("address", e.target.value)} className="input" /></F></div>
@@ -137,14 +152,20 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient) => void
   );
 }
 
-function StartVisit({ patient, onDone, onBack }: { patient: Patient; onDone: () => void; onBack: () => void }) {
+function StartVisit({ patient, doctorId: initialDoctorId, onDone, onBack }: { patient: Patient; doctorId: string; onDone: () => void; onBack: () => void }) {
   const [complaint, setComplaint] = useState("");
   const [bp, setBp] = useState(""); const [temperature, setTemperature] = useState(""); const [pulse, setPulse] = useState(""); const [weight, setWeight] = useState("");
+  const [doctorId, setDoctorId] = useState(initialDoctorId);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
+  useEffect(() => {
+    fetch("/api/doctors").then((res) => res.ok ? res.json() : []).then(setDoctors);
+  }, []);
 
   const submit = async () => {
     const res = await fetch("/api/visits", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ patientId: patient.id, chiefComplaint: complaint, bp, temperature, pulse, weight }),
+      body: JSON.stringify({ patientId: patient.id, doctorId, chiefComplaint: complaint, bp, temperature, pulse, weight }),
     });
     if (res.ok) onDone();
   };
@@ -161,6 +182,7 @@ function StartVisit({ patient, onDone, onBack }: { patient: Patient; onDone: () 
       <AllergyBanner allergies={patient.allergies.map((a) => a.name)} />
       <div className="mt-5 text-xs font-bold text-inkSoft uppercase tracking-wide">Today's visit</div>
       <div className="flex flex-col gap-4 mt-2">
+        <F label="Doctor" required><select required value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className="input"><option value="" disabled>Select doctor</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>Dr. {doctor.name}</option>)}</select></F>
         <F label="Reason for visit / chief complaint">
           <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} className="input min-h-[70px]" />
         </F>
@@ -172,7 +194,7 @@ function StartVisit({ patient, onDone, onBack }: { patient: Patient; onDone: () 
         </div>
       </div>
       <div className="flex justify-end mt-5">
-        <button onClick={submit} className="flex items-center gap-2 bg-accent text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><Plus size={15} /> Add to doctor's queue</button>
+        <button onClick={submit} disabled={!doctorId} className="flex items-center gap-2 bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><Plus size={15} /> Add to doctor's queue</button>
       </div>
       <style jsx>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
     </div>
