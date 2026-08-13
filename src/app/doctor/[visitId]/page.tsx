@@ -19,6 +19,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [tests, setTests] = useState<string[]>([]);
   const [testDraft, setTestDraft] = useState("");
   const [signConfirmed, setSignConfirmed] = useState(false);
+  const [reportPrinted, setReportPrinted] = useState(false);
   const [error, setError] = useState("");
   const [pastVisits, setPastVisits] = useState<any[]>([]);
 
@@ -45,6 +46,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
   const save = async (complete: boolean) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
+    if (complete && !reportPrinted) { setError("Print the patient report before completing the visit."); return; }
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -61,6 +63,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   };
 
   const completed = visit.status === "COMPLETED";
+  const printReport = () => { setReportPrinted(true); setError(""); window.print(); };
 
   return (
     <div>
@@ -74,12 +77,12 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           </div>
         </div>
         <div className="flex gap-2">
-          {completed && <button onClick={() => window.print()} className="flex items-center gap-1 text-sm text-white bg-accent rounded-lg px-3 py-1.5"><Printer size={14} /> Print report</button>}
+          <button onClick={printReport} className="flex items-center gap-1 text-sm text-white bg-accent rounded-lg px-3 py-1.5"><Printer size={14} /> Print report</button>
           <button onClick={() => router.push("/doctor")} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back to queue</button>
         </div>
       </div>
 
-      {completed && <div className="bg-accentSoft text-accentDark border border-border rounded-lg px-4 py-3 text-sm font-semibold mb-4">Consultation completed and signed. Use “Print report” to give the patient a copy.</div>}
+      {completed && <div className="bg-accentSoft text-accentDark border border-border rounded-lg px-4 py-3 text-sm font-semibold mb-4">Consultation completed and signed.</div>}
 
       <AllergyBanner allergies={visit.patient.allergies.map((a: any) => a.name)} />
 
@@ -157,21 +160,22 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             <input type="checkbox" checked={signConfirmed} onChange={(e) => setSignConfirmed(e.target.checked)} />
             I confirm this consultation record is accurate and digitally sign it.
           </label>
+          {!reportPrinted && <div className="text-xs text-inkSoft mt-2">Print the patient report before completing this visit.</div>}
           {error && <div className="text-alert text-sm mt-2">{error}</div>}
           <div className="flex gap-2.5 mt-4 justify-end">
             <button onClick={() => save(false)} className="text-sm text-accentDark border border-border rounded-lg px-4 py-2.5 font-semibold">Save draft</button>
-            <button onClick={() => save(true)} className="flex items-center gap-2 bg-accent text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><CheckCircle2 size={15} /> Complete &amp; sign visit</button>
+            <button onClick={() => save(true)} disabled={!reportPrinted} className="flex items-center gap-2 bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><CheckCircle2 size={15} /> Complete &amp; sign visit</button>
           </div>
         </div>
       </div>
       </div>
-      {completed && <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} advice={advice} prescriptions={rx} tests={tests} doctorName={visit.doctor?.name || session?.user?.name || ""} />}
+      <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} advice={advice} prescriptions={rx} tests={tests} doctorName={visit.doctor?.name || session?.user?.name || ""} signed={completed} />
       <style jsx global>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; } .patient-report { display: none; } @media print { .consult-screen { display: none !important; } .patient-report { display: block !important; color: #17202A; font-family: Arial, sans-serif; } }`}</style>
     </div>
   );
 }
 
-function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, doctorName }: { visit: any; notes: string; diagnosis: string; advice: string; prescriptions: Rx[]; tests: string[]; doctorName: string }) {
+function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, doctorName, signed }: { visit: any; notes: string; diagnosis: string; advice: string; prescriptions: Rx[]; tests: string[]; doctorName: string; signed: boolean }) {
   const prescribed = prescriptions.filter((item) => item.medicine?.trim());
   return <article className="patient-report">
     <header className="border-b-2 border-[#2E6B5A] pb-4 mb-5"><h1 className="text-2xl font-bold">CareChart</h1><p className="text-sm">Consultation Report</p></header>
@@ -183,7 +187,7 @@ function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, 
     <ReportSection title="Advice"><span className="whitespace-pre-wrap">{advice || "—"}</span></ReportSection>
     <ReportSection title="Prescription">{prescribed.length ? <table className="w-full border-collapse"><thead><tr className="border-b"><th className="text-left py-1">Medicine</th><th className="text-left py-1">Dosage</th><th className="text-left py-1">Frequency</th><th className="text-left py-1">Duration</th></tr></thead><tbody>{prescribed.map((item, index) => <tr key={index} className="border-b"><td className="py-1">{item.medicine}</td><td>{item.dosage || "—"}</td><td>{item.frequency || "—"}</td><td>{item.duration || "—"}</td></tr>)}</tbody></table> : "—"}</ReportSection>
     {tests.length > 0 && <ReportSection title="Tests ordered"><ul className="list-disc pl-5">{tests.map((test, index) => <li key={index}>{test}</li>)}</ul></ReportSection>}
-    <footer className="mt-12 pt-4 border-t text-sm"><p>Digitally signed by Dr. {doctorName}</p><p className="text-xs mt-1">This is a computer-generated consultation report.</p></footer>
+    <footer className="mt-12 pt-4 border-t text-sm"><p>{signed ? `Digitally signed by Dr. ${doctorName}` : `Prepared by Dr. ${doctorName}`}</p><p className="text-xs mt-1">This is a computer-generated consultation report.</p></footer>
   </article>;
 }
 
