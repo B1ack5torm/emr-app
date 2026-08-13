@@ -37,7 +37,7 @@ function AcceptInviteForm() {
     });
   }, [token]);
 
-  const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "PHARMACIST" ? "Pharmacist" : r === "ADMIN" ? "Admin" : "Front Desk");
+  const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

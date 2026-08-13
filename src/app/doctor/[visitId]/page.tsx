@@ -20,7 +20,6 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [signConfirmed, setSignConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [pastVisits, setPastVisits] = useState<any[]>([]);
-  const [pharmacySent, setPharmacySent] = useState(false);
 
   useEffect(() => {
     fetch(`/api/visits/${params.visitId}`).then((r) => r.json()).then((v) => {
@@ -42,30 +41,15 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const removeRx = (i: number) => setRx(rx.filter((_, idx) => idx !== i));
   const addTest = () => { if (testDraft.trim()) { setTests([...tests, testDraft.trim()]); setTestDraft(""); } };
 
-  const save = async (complete: boolean, sendToPharmacy = false) => {
+  const save = async (complete: boolean) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
-    setError("");
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete, sendToPharmacy }),
+      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete }),
     });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Could not save the visit. Please try again.");
-      return;
-    }
-
-    if (complete) { router.push("/doctor"); return; }
-
-    // Not completing — stay on the page, just sync state with what was saved
-    const updated = await res.json();
-    setNotes(updated.doctorNotes || "");
-    setDiagnosis(updated.diagnosis || "");
-    setRx(updated.prescriptions?.length ? updated.prescriptions : []);
-    setTests((updated.testsOrdered || []).map((t: any) => t.name));
-    if (sendToPharmacy) setPharmacySent(true);
+    if (res.ok) router.push("/doctor");
+    else setError("Could not save the visit. Please try again.");
   };
 
   return (
@@ -122,14 +106,6 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             ))}
           </div>
           <button type="button" onClick={addRx} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5 mt-2"><Plus size={14} /> Add medicine</button>
-          <button
-            type="button"
-            onClick={() => save(false, true)}
-            disabled={pharmacySent}
-            className="flex items-center gap-1 text-sm text-white bg-accent rounded-lg px-3 py-1.5 mt-2 ml-2 disabled:opacity-50"
-          >
-            <Pill size={14} /> {pharmacySent ? "Sent to pharmacist queue" : "Send to pharmacist queue"}
-          </button>
         </div>
 
         <div>

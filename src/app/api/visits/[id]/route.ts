@@ -27,31 +27,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!existing || existing.patient.organizationId !== organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { diagnosis, doctorNotes, prescriptions, testsOrdered, complete, sendToPharmacy } = body;
+  const { diagnosis, doctorNotes, prescriptions, testsOrdered, complete } = body;
 
-  const prescriptionItems = (prescriptions || []).filter((p: any) => p.medicine?.trim()).map((p: any) => ({ medicine: p.medicine.trim(), dosage: p.dosage?.trim() || null, frequency: p.frequency?.trim() || null, duration: p.duration?.trim() || null }));
-  if (sendToPharmacy && prescriptionItems.length === 0) return NextResponse.json({ error: "Add at least one medicine before sending to pharmacy." }, { status: 400 });
-  if (sendToPharmacy) {
-    const existingPharmacyOrder = await prisma.pharmacyOrder.findUnique({ where: { visitId: params.id }, select: { id: true } });
-    if (existingPharmacyOrder) return NextResponse.json({ error: "This prescription has already been sent to pharmacy." }, { status: 409 });
-  }
+  await prisma.prescription.deleteMany({ where: { visitId: params.id } });
+  await prisma.testOrder.deleteMany({ where: { visitId: params.id } });
 
-  const visit = await prisma.$transaction(async (tx) => {
-    await tx.prescription.deleteMany({ where: { visitId: params.id } });
-    await tx.testOrder.deleteMany({ where: { visitId: params.id } });
-    const updated = await tx.visit.update({
+  const visit = await prisma.visit.update({
     where: { id: params.id },
     data: {
       diagnosis, doctorNotes, doctorId: (session.user as any).id,
       status: complete ? "COMPLETED" : "WAITING",
       signedAt: complete ? new Date() : null,
-      prescriptions: { create: prescriptionItems },
+      prescriptions: { create: (prescriptions || []).filter((p: any) => p.medicine?.trim()).map((p: any) => ({ medicine: p.medicine, dosage: p.dosage, frequency: p.frequency, duration: p.duration })) },
       testsOrdered: { create: (testsOrdered || []).map((name: string) => ({ name })) },
     },
     include: { prescriptions: true, testsOrdered: true, doctor: { select: { name: true } } },
-    });
-    if (sendToPharmacy) await tx.pharmacyOrder.create({ data: { visitId: params.id, patientId: existing.patientId, organizationId, items: { create: prescriptionItems } } });
-    return updated;
   });
 
   return NextResponse.json(visit);

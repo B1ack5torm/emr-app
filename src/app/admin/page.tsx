@@ -94,7 +94,7 @@ export default function AdminPage() {
     load();
   };
 
-  const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "PHARMACIST" ? "Pharmacist" : r === "ADMIN" ? "Admin" : "Front Desk");
+  const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
 
   if (loading) return <div className="text-inkSoft">Loading…</div>;
 
@@ -115,7 +115,6 @@ export default function AdminPage() {
             <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm">
               <option value="RECEPTION">Front Desk</option>
               <option value="DOCTOR">Doctor</option>
-              <option value="PHARMACIST">Pharmacist</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>
@@ -166,8 +165,7 @@ export default function AdminPage() {
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Role</label>
               <select value={manualRole} onChange={(e) => setManualRole(e.target.value)} className="border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm">
                 <option value="RECEPTION">Front Desk</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="PHARMACIST">Pharmacist</option>
+                <option value="DOCTOR">Doctor</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
@@ -196,7 +194,6 @@ export default function AdminPage() {
                   <select value={pendingRoleChoice[u.id] || "RECEPTION"} onChange={(e) => setPendingRoleChoice({ ...pendingRoleChoice, [u.id]: e.target.value })} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
                     <option value="RECEPTION">Front Desk</option>
                     <option value="DOCTOR">Doctor</option>
-                    <option value="PHARMACIST">Pharmacist</option>
                   </select>
                   <button onClick={() => approve(u.id)} className="flex items-center gap-1 bg-accent text-white text-sm font-semibold px-3 py-1.5 rounded-lg"><CheckCircle2 size={14} /> Approve</button>
                   <button onClick={() => reject(u.id)} className="flex items-center gap-1 text-alert text-sm font-semibold px-3 py-1.5 rounded-lg border border-alertSoft"><XCircle size={14} /> Reject</button>

@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const { email, role } = await req.json();
   if (!email || !role) return NextResponse.json({ error: "Email and role are required." }, { status: 400 });
-  if (!["RECEPTION", "DOCTOR", "PHARMACIST", "ADMIN"].includes(role)) return NextResponse.json({ error: "Invalid role." }, { status: 400 });
+  if (!["RECEPTION", "DOCTOR", "ADMIN"].includes(role)) return NextResponse.json({ error: "Invalid role." }, { status: 400 });
 
   const organizationId = (session.user as any).organizationId;
 
