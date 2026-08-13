@@ -14,6 +14,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [visit, setVisit] = useState<any>(null);
   const [notes, setNotes] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
+  const [advice, setAdvice] = useState("");
   const [rx, setRx] = useState<Rx[]>([]);
   const [tests, setTests] = useState<string[]>([]);
   const [testDraft, setTestDraft] = useState("");
@@ -26,6 +27,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       setVisit(v);
       setNotes(v.doctorNotes || "");
       setDiagnosis(v.diagnosis || "");
+      setAdvice(v.advice || "");
       setRx(v.prescriptions?.length ? v.prescriptions : []);
       setTests((v.testsOrdered || []).map((t: any) => t.name));
       fetch(`/api/patients/${v.patientId}`).then((r) => r.json()).then((p) => {
@@ -46,7 +48,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete }),
+      body: JSON.stringify({ diagnosis, doctorNotes: notes, advice, prescriptions: rx, testsOrdered: finalTests, complete }),
     });
     if (res.ok) {
       const saved = await res.json();
@@ -105,6 +107,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input min-h-[70px]" placeholder="Findings on examination…" />
         </F>
         <F label="Diagnosis"><input value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} className="input" /></F>
+        <F label="Advice to patient"><textarea value={advice} onChange={(e) => setAdvice(e.target.value)} className="input min-h-[70px]" placeholder="e.g. Rest, stay hydrated, and return if symptoms worsen." /></F>
 
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-inkSoft uppercase mb-2"><Pill size={14} /> Prescription</div>
@@ -162,13 +165,13 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
         </div>
       </div>
       </div>
-      {completed && <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} prescriptions={rx} tests={tests} doctorName={visit.doctor?.name || session?.user?.name || ""} />}
+      {completed && <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} advice={advice} prescriptions={rx} tests={tests} doctorName={visit.doctor?.name || session?.user?.name || ""} />}
       <style jsx global>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; } .patient-report { display: none; } @media print { .consult-screen { display: none !important; } .patient-report { display: block !important; color: #17202A; font-family: Arial, sans-serif; } }`}</style>
     </div>
   );
 }
 
-function PatientReport({ visit, notes, diagnosis, prescriptions, tests, doctorName }: { visit: any; notes: string; diagnosis: string; prescriptions: Rx[]; tests: string[]; doctorName: string }) {
+function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, doctorName }: { visit: any; notes: string; diagnosis: string; advice: string; prescriptions: Rx[]; tests: string[]; doctorName: string }) {
   const prescribed = prescriptions.filter((item) => item.medicine?.trim());
   return <article className="patient-report">
     <header className="border-b-2 border-[#2E6B5A] pb-4 mb-5"><h1 className="text-2xl font-bold">CareChart</h1><p className="text-sm">Consultation Report</p></header>
@@ -177,6 +180,7 @@ function PatientReport({ visit, notes, diagnosis, prescriptions, tests, doctorNa
     <ReportSection title="Vitals">BP: {visit.bp || "—"} · Temperature: {visit.temperature || "—"}°F · Pulse: {visit.pulse || "—"} · Weight: {visit.weight || "—"} kg</ReportSection>
     <ReportSection title="Examination findings"><span className="whitespace-pre-wrap">{notes || "—"}</span></ReportSection>
     <ReportSection title="Diagnosis">{diagnosis || "—"}</ReportSection>
+    <ReportSection title="Advice"><span className="whitespace-pre-wrap">{advice || "—"}</span></ReportSection>
     <ReportSection title="Prescription">{prescribed.length ? <table className="w-full border-collapse"><thead><tr className="border-b"><th className="text-left py-1">Medicine</th><th className="text-left py-1">Dosage</th><th className="text-left py-1">Frequency</th><th className="text-left py-1">Duration</th></tr></thead><tbody>{prescribed.map((item, index) => <tr key={index} className="border-b"><td className="py-1">{item.medicine}</td><td>{item.dosage || "—"}</td><td>{item.frequency || "—"}</td><td>{item.duration || "—"}</td></tr>)}</tbody></table> : "—"}</ReportSection>
     {tests.length > 0 && <ReportSection title="Tests ordered"><ul className="list-disc pl-5">{tests.map((test, index) => <li key={index}>{test}</li>)}</ul></ReportSection>}
     <footer className="mt-12 pt-4 border-t text-sm"><p>Digitally signed by Dr. {doctorName}</p><p className="text-xs mt-1">This is a computer-generated consultation report.</p></footer>

@@ -104,6 +104,7 @@ model Visit {
   weight         String?
   diagnosis      String?
   doctorNotes    String?
+  advice         String?
   signedAt       DateTime?
   createdAt      DateTime       @default(now())
   patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)

@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!existing || existing.patient.organizationId !== organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { diagnosis, doctorNotes, prescriptions, testsOrdered, complete } = body;
+  const { diagnosis, doctorNotes, advice, prescriptions, testsOrdered, complete } = body;
 
   await prisma.prescription.deleteMany({ where: { visitId: params.id } });
   await prisma.testOrder.deleteMany({ where: { visitId: params.id } });
@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const visit = await prisma.visit.update({
     where: { id: params.id },
     data: {
-      diagnosis, doctorNotes, doctorId: (session.user as any).id,
+      diagnosis, doctorNotes, advice, doctorId: (session.user as any).id,
       status: complete ? "COMPLETED" : "WAITING",
       signedAt: complete ? new Date() : null,
       prescriptions: { create: (prescriptions || []).filter((p: any) => p.medicine?.trim()).map((p: any) => ({ medicine: p.medicine, dosage: p.dosage, frequency: p.frequency, duration: p.duration })) },
