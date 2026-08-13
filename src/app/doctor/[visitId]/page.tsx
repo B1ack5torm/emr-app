@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
 
 type Rx = { medicine: string; dosage: string; frequency: string; duration: string };
@@ -48,12 +48,21 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ diagnosis, doctorNotes: notes, prescriptions: rx, testsOrdered: finalTests, complete }),
     });
-    if (res.ok) router.push("/doctor");
-    else setError("Could not save the visit. Please try again.");
+    if (res.ok) {
+      const saved = await res.json();
+      setVisit((current: any) => ({ ...current, ...saved, patient: current.patient }));
+      setRx(saved.prescriptions || rx);
+      setTests((saved.testsOrdered || []).map((test: any) => test.name));
+      setTestDraft("");
+      setError("");
+    } else setError("Could not save the visit. Please try again.");
   };
+
+  const completed = visit.status === "COMPLETED";
 
   return (
     <div>
+      <div className="consult-screen">
       <div className="flex justify-between items-start mb-3">
         <div>
           <div className="font-serif text-xl font-semibold">{visit.patient.name}</div>
@@ -62,8 +71,13 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             {visit.patient.dateOfBirth ? ` · DOB ${new Date(visit.patient.dateOfBirth).toLocaleDateString()}` : ""}
           </div>
         </div>
-        <button onClick={() => router.push("/doctor")} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back to queue</button>
+        <div className="flex gap-2">
+          {completed && <button onClick={() => window.print()} className="flex items-center gap-1 text-sm text-white bg-accent rounded-lg px-3 py-1.5"><Printer size={14} /> Print report</button>}
+          <button onClick={() => router.push("/doctor")} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back to queue</button>
+        </div>
       </div>
+
+      {completed && <div className="bg-accentSoft text-accentDark border border-border rounded-lg px-4 py-3 text-sm font-semibold mb-4">Consultation completed and signed. Use “Print report” to give the patient a copy.</div>}
 
       <AllergyBanner allergies={visit.patient.allergies.map((a: any) => a.name)} />
 
@@ -147,10 +161,29 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           </div>
         </div>
       </div>
-      <style jsx>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
+      </div>
+      {completed && <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} prescriptions={rx} tests={tests} doctorName={visit.doctor?.name || session?.user?.name || ""} />}
+      <style jsx global>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; } .patient-report { display: none; } @media print { .consult-screen { display: none !important; } .patient-report { display: block !important; color: #17202A; font-family: Arial, sans-serif; } }`}</style>
     </div>
   );
 }
+
+function PatientReport({ visit, notes, diagnosis, prescriptions, tests, doctorName }: { visit: any; notes: string; diagnosis: string; prescriptions: Rx[]; tests: string[]; doctorName: string }) {
+  const prescribed = prescriptions.filter((item) => item.medicine?.trim());
+  return <article className="patient-report">
+    <header className="border-b-2 border-[#2E6B5A] pb-4 mb-5"><h1 className="text-2xl font-bold">CareChart</h1><p className="text-sm">Consultation Report</p></header>
+    <section className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-5"><p><b>Patient:</b> {visit.patient.name}</p><p><b>Report date:</b> {new Date(visit.signedAt || visit.createdAt).toLocaleDateString()}</p><p><b>Age / Gender:</b> {visit.patient.age} years / {visit.patient.gender}</p><p><b>MRN:</b> {visit.patient.mrn}</p><p><b>Phone:</b> {visit.patient.phone || "—"}</p><p><b>Doctor:</b> Dr. {doctorName}</p></section>
+    <ReportSection title="Chief complaint">{visit.chiefComplaint || "—"}</ReportSection>
+    <ReportSection title="Vitals">BP: {visit.bp || "—"} · Temperature: {visit.temperature || "—"}°F · Pulse: {visit.pulse || "—"} · Weight: {visit.weight || "—"} kg</ReportSection>
+    <ReportSection title="Examination findings"><span className="whitespace-pre-wrap">{notes || "—"}</span></ReportSection>
+    <ReportSection title="Diagnosis">{diagnosis || "—"}</ReportSection>
+    <ReportSection title="Prescription">{prescribed.length ? <table className="w-full border-collapse"><thead><tr className="border-b"><th className="text-left py-1">Medicine</th><th className="text-left py-1">Dosage</th><th className="text-left py-1">Frequency</th><th className="text-left py-1">Duration</th></tr></thead><tbody>{prescribed.map((item, index) => <tr key={index} className="border-b"><td className="py-1">{item.medicine}</td><td>{item.dosage || "—"}</td><td>{item.frequency || "—"}</td><td>{item.duration || "—"}</td></tr>)}</tbody></table> : "—"}</ReportSection>
+    {tests.length > 0 && <ReportSection title="Tests ordered"><ul className="list-disc pl-5">{tests.map((test, index) => <li key={index}>{test}</li>)}</ul></ReportSection>}
+    <footer className="mt-12 pt-4 border-t text-sm"><p>Digitally signed by Dr. {doctorName}</p><p className="text-xs mt-1">This is a computer-generated consultation report.</p></footer>
+  </article>;
+}
+
+function ReportSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className="mb-4 text-sm"><h2 className="font-bold uppercase text-xs mb-1">{title}</h2><div>{children}</div></section>; }
 
 function ImagingOrderPanel({ visitId }: { visitId: string }) {
   const [modality, setModality] = useState("XRAY");
