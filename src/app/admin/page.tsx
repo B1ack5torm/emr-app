@@ -112,7 +112,7 @@ export default function AdminPage() {
     load();
   };
 
-  const roleLabel = (r: string) => (r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
+  const roleLabel = (r: string) => (r === "SUPER_ADMIN" ? "Super Admin" : r === "DOCTOR" ? "Doctor" : r === "ADMIN" ? "Admin" : "Front Desk");
 
   if (loading) return <div className="text-inkSoft">Loading…</div>;
   if (loadError) return <div className="bg-alertSoft text-alert border border-alertSoft rounded-lg p-4 text-sm">Could not load the Admin page: {loadError} <button onClick={load} className="ml-2 underline font-semibold">Try again</button></div>;
@@ -233,14 +233,13 @@ export default function AdminPage() {
                 <div className="text-xs text-inkSoft">{u.email}</div>
               </div>
               <div className="flex items-center gap-2">
-                <select value={u.role || ""} onChange={(e) => changeRole(u.id, e.target.value)} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
+                <select value={u.role || ""} disabled={u.role === "SUPER_ADMIN"} onChange={(e) => changeRole(u.id, e.target.value)} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5] disabled:opacity-70 disabled:cursor-not-allowed">
+                  {u.role === "SUPER_ADMIN" && <option value="SUPER_ADMIN">Super Admin</option>}
                   <option value="RECEPTION">Front Desk</option>
                   <option value="DOCTOR">Doctor</option>
                   <option value="ADMIN">Admin</option>
                 </select>
-                <button onClick={() => deleteUser(u.id, u.name)} className="text-alert text-xs font-semibold border border-alertSoft rounded-lg px-3 py-1.5">
-                  Remove
-                </button>
+                {u.role !== "SUPER_ADMIN" && <button onClick={() => deleteUser(u.id, u.name)} className="text-alert text-xs font-semibold border border-alertSoft rounded-lg px-3 py-1.5">Remove</button>}
               </div>
             </div>
           ))}

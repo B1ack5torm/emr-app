@@ -12,6 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
   const target = await prisma.user.findUnique({ where: { id: params.id } });
   if (!target || (!isSuperAdmin && target.organizationId !== orgId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (target.role === "SUPER_ADMIN") return NextResponse.json({ error: "The Super Admin role cannot be changed here." }, { status: 403 });
 
   const body = await req.json();
 
@@ -43,6 +44,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!target || (!isSuperAdmin && target.organizationId !== orgId)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if (target.role === "SUPER_ADMIN") return NextResponse.json({ error: "The Super Admin account cannot be removed." }, { status: 403 });
   if (target.id === (session.user as any).id) {
     return NextResponse.json({ error: "You can't delete your own account." }, { status: 400 });
   }
