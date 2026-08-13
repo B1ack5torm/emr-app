@@ -11,6 +11,8 @@ export default function NavBar() {
   const role = (session?.user as any)?.role;
   const orgName = (session?.user as any)?.organizationName;
 
+  if (!session) return null;
+
   const tabs = [
     { href: "/frontdesk", label: "Front Desk", icon: <ClipboardList size={15} />, roles: ["RECEPTION", "ADMIN", "SUPER_ADMIN"] },
     { href: "/appointments", label: "Schedule", icon: <CalendarDays size={15} />, roles: ["RECEPTION", "ADMIN", "SUPER_ADMIN"] },

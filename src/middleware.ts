@@ -31,7 +31,7 @@ export default withAuth(
     }
     return NextResponse.next();
   },
-  { callbacks: { authorized: ({ token }) => !!token } }
+  { callbacks: { authorized: ({ token, req }) => req.nextUrl.pathname === "/" || !!token } }
 );
 
 export const config = {
