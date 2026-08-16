@@ -11,7 +11,7 @@ export default function NavBar() {
   const role = (session?.user as any)?.role;
   const orgName = (session?.user as any)?.organizationName;
 
-  if (pathname?.startsWith("/patient")) return null;
+  if (pathname?.startsWith("/patient") || pathname?.startsWith("/book-appointment")) return null;
   if (!session) return null;
 
   const tabs = [

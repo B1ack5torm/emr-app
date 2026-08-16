@@ -16,15 +16,33 @@ export async function GET(req: NextRequest) {
   if (Number.isNaN(start.getTime())) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
   const end = new Date(start); end.setDate(end.getDate() + 1);
 
-  const [appointments, doctors] = await Promise.all([
+  const [appointments, onlineAppointments, doctors] = await Promise.all([
     prisma.appointment.findMany({
       where: { ...(isSuperAdmin ? {} : { organizationId }), scheduledAt: { gte: start, lt: end } },
       include: { patient: { select: { id: true, name: true, mrn: true, phone: true, email: true } }, doctor: { select: { id: true, name: true } } },
       orderBy: { scheduledAt: "asc" },
     }),
+    prisma.appointmentRequest.findMany({
+      where: { ...(isSuperAdmin ? {} : { organizationId }), status: { in: ["CONFIRMED", "CHECKED_IN"] }, requestedAt: { gte: start, lt: end } },
+      include: { doctor: { select: { id: true, name: true } } },
+      orderBy: { requestedAt: "asc" },
+    }),
     prisma.user.findMany({ where: { ...(isSuperAdmin ? {} : { organizationId }), role: "DOCTOR", status: "ACTIVE" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
-  return NextResponse.json({ appointments, doctors });
+  const schedule = [
+    ...appointments.map((appointment) => ({ ...appointment, source: "INTERNAL" as const })),
+    ...onlineAppointments.map((appointment) => ({
+      id: appointment.id,
+      scheduledAt: appointment.requestedAt,
+      durationMinutes: appointment.durationMinutes,
+      reason: appointment.reason,
+      status: appointment.status,
+      source: "ONLINE" as const,
+      patient: { id: "", name: appointment.patientName, mrn: "Online request", phone: appointment.patientPhone, email: appointment.patientEmail },
+      doctor: appointment.doctor,
+    })),
+  ].sort((left, right) => new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime());
+  return NextResponse.json({ appointments: schedule, doctors });
 }
 
 export async function POST(req: NextRequest) {

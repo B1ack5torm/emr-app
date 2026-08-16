@@ -6,7 +6,7 @@ import { F } from "@/components/shared";
 
 type Patient = { id: string; name: string; mrn: string; phone?: string; email?: string };
 type Doctor = { id: string; name: string };
-type Appointment = { id: string; scheduledAt: string; durationMinutes: number; reason?: string; status: "SCHEDULED" | "CHECKED_IN" | "CANCELLED"; patient: Patient; doctor?: Doctor };
+type Appointment = { id: string; scheduledAt: string; durationMinutes: number; reason?: string; status: "SCHEDULED" | "CHECKED_IN" | "CANCELLED" | "CONFIRMED"; source: "INTERNAL" | "ONLINE"; patient: Patient; doctor?: Doctor };
 const today = () => new Date().toLocaleDateString("en-CA");
 
 export default function AppointmentsPage() {
@@ -14,6 +14,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [onlineCheckIn, setOnlineCheckIn] = useState<Appointment | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -27,6 +28,16 @@ export default function AppointmentsPage() {
     setError("");
     const res = await fetch(`/api/appointments/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) });
     if (!res.ok) setError((await res.json()).error || "Could not update appointment.");
+    await load();
+  };
+  const checkInOnline = async (age: string, gender: string) => {
+    if (!onlineCheckIn) return;
+    setError("");
+    const res = await fetch(`/api/appointments/online/${onlineCheckIn.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ age, gender }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not check in this patient.");
+    setOnlineCheckIn(null);
+    setNotice(`${data.patient.name} checked in and moved to Dr. ${onlineCheckIn.doctor?.name || "the assigned doctor"}'s waiting room.`);
     await load();
   };
 
@@ -46,14 +57,26 @@ export default function AppointmentsPage() {
       {appointments.length === 0 ? <div className="p-12 text-center text-inkSoft">No appointments scheduled for this day.</div> : <div className="divide-y divide-border">
         {appointments.map((a) => <div key={a.id} className={`p-4 flex flex-wrap items-center gap-4 ${a.status === "CANCELLED" ? "opacity-50" : ""}`}>
           <div className="w-24 text-sm font-mono font-semibold">{new Date(a.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-          <div className="min-w-[180px] flex-1"><div className="font-semibold text-sm">{a.patient.name} <span className="font-mono text-xs text-inkSoft">{a.patient.mrn}</span></div><div className="text-xs text-inkSoft mt-0.5">{a.reason || "No reason noted"}</div></div>
+          <div className="min-w-[180px] flex-1"><div className="flex flex-wrap items-center gap-2 font-semibold text-sm"><span>{a.patient.name}</span><span className="font-mono text-xs font-normal text-inkSoft">{a.patient.mrn}</span>{a.source === "ONLINE" && <span className="rounded-full bg-waitingSoft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-waiting">Online</span>}</div><div className="text-xs text-inkSoft mt-0.5">{a.reason || "No reason noted"}</div></div>
           <div className="text-sm text-inkSoft min-w-[130px]">{a.doctor?.name || "Unassigned"} · {a.durationMinutes} min</div>
-          <div className="flex items-center gap-2">{a.status === "SCHEDULED" ? <><button onClick={() => update(a.id, "check-in")} className="inline-flex items-center gap-1 text-sm font-semibold text-accentDark border border-border rounded-md px-2.5 py-1.5"><CheckCircle2 size={14} /> Check in</button><button aria-label="Cancel appointment" onClick={() => update(a.id, "cancel")} className="p-1.5 text-alert"><X size={16} /></button></> : <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${a.status === "CHECKED_IN" ? "bg-accentSoft text-accentDark" : "bg-[#eee9df] text-inkSoft"}`}>{a.status === "CHECKED_IN" ? "Checked in" : "Cancelled"}</span>}</div>
+          <div className="flex items-center gap-2">{a.status === "SCHEDULED" ? <><button onClick={() => update(a.id, "check-in")} className="inline-flex items-center gap-1 text-sm font-semibold text-accentDark border border-border rounded-md px-2.5 py-1.5"><CheckCircle2 size={14} /> Check in</button><button aria-label="Cancel appointment" onClick={() => update(a.id, "cancel")} className="p-1.5 text-alert"><X size={16} /></button></> : a.status === "CONFIRMED" && a.source === "ONLINE" ? <button onClick={() => setOnlineCheckIn(a)} className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accentDark"><CheckCircle2 size={14} /> Check in</button> : <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${a.status === "CHECKED_IN" || a.status === "CONFIRMED" ? "bg-accentSoft text-accentDark" : "bg-[#eee9df] text-inkSoft"}`}>{a.status === "CHECKED_IN" ? "Checked in" : a.status === "CONFIRMED" ? "Confirmed" : "Cancelled"}</span>}</div>
         </div>)}
       </div>}
     </div>
     {showForm && <AppointmentForm date={date} doctors={doctors} onClose={() => setShowForm(false)} onSaved={(notifications) => { setShowForm(false); setNotice(`Appointment booked. Email: ${notifications.email}.`); load(); }} />}
+    {onlineCheckIn && <OnlineCheckInForm appointment={onlineCheckIn} onClose={() => setOnlineCheckIn(null)} onSubmit={checkInOnline} onError={setError} />}
   </div>;
+}
+
+function OnlineCheckInForm({ appointment, onClose, onSubmit, onError }: { appointment: Appointment; onClose: () => void; onSubmit: (age: string, gender: string) => Promise<void>; onError: (message: string) => void }) {
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
+  const [saving, setSaving] = useState(false);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setSaving(true); onError("");
+    try { await onSubmit(age, gender); } catch (reason) { onError(reason instanceof Error ? reason.message : "Could not check in this patient."); setSaving(false); }
+  };
+  return <div className="fixed inset-0 z-20 flex items-start justify-center bg-black/30 px-4 pt-16"><form onSubmit={submit} className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"><div className="mb-2 flex items-center justify-between"><div className="font-serif text-lg font-semibold">Check in online patient</div><button type="button" onClick={onClose} aria-label="Close" className="p-1"><X size={18} /></button></div><p className="mb-5 text-sm text-inkSoft">Complete the patient record for <b className="text-ink">{appointment.patient.name}</b> before moving them to the waiting room.</p><div className="grid grid-cols-2 gap-3"><F label="Age" required><input required type="number" min="1" max="130" value={age} onChange={(event) => setAge(event.target.value)} className="w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2.5 text-sm" /></F><F label="Gender" required><select required value={gender} onChange={(event) => setGender(event.target.value)} className="w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2.5 text-sm"><option value="">Select</option><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F></div><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button><button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Checking in..." : "Check in"}</button></div></form></div>;
 }
 
 function AppointmentForm({ date, doctors, onClose, onSaved }: { date: string; doctors: Doctor[]; onClose: () => void; onSaved: (notifications: { email: string }) => void }) {

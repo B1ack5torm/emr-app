@@ -35,6 +35,7 @@ export default function LandingExperience() {
         </Link>
         <nav className="flex items-center gap-1.5 sm:gap-3">
           <a href="#features" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-[#41675C] hover:bg-white/70 sm:block">Features</a>
+          <Link href="/book-appointment" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-[#245847] hover:bg-white/70 lg:block">Book appointment</Link>
           <Link href="/patient-login" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-[#245847] hover:bg-white/70 md:block">Patient portal</Link>
           <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-[#245847] hover:bg-white/70 sm:px-4">Sign in</Link>
           <Link href="/register" className="rounded-lg bg-[#163F35] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-[#245847]/15 transition hover:-translate-y-0.5 hover:bg-[#0F3027] sm:px-4">Sign up</Link>
@@ -47,7 +48,7 @@ export default function LandingExperience() {
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#CDE1D8] bg-white/80 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[#216450] shadow-sm"><Sparkles size={13} /> The modern clinical workspace</p>
             <h1 className="font-serif text-4xl font-bold leading-[1.04] tracking-[-0.035em] text-[#14382F] sm:text-5xl lg:text-[4.25rem]">More focus on care.<br /><span className="text-[#28725E]">Less friction</span> everywhere else.</h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-[#567268]">EMR App connects your front desk, clinicians, appointments, records, and billing in one thoughtfully simple system.</p>
-            <div className="mt-8 flex flex-wrap gap-3"><Link href="/register" className="inline-flex items-center gap-2 rounded-xl bg-[#24705D] px-5 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(36,112,93,0.25)] transition hover:-translate-y-0.5 hover:bg-[#185342]">Create your workspace <ArrowRight size={16} /></Link><a href="#workflow" className="inline-flex items-center gap-2 rounded-xl border border-[#BFD3CA] bg-white/80 px-5 py-3.5 text-sm font-bold text-[#245847] transition hover:border-[#24705D] hover:bg-white">Explore the workflow <ChevronRight size={16} /></a></div>
+            <div className="mt-8 flex flex-wrap gap-3"><Link href="/book-appointment" className="inline-flex items-center gap-2 rounded-xl bg-[#24705D] px-5 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(36,112,93,0.25)] transition hover:-translate-y-0.5 hover:bg-[#185342]">Book an appointment <CalendarDays size={16} /></Link><Link href="/register" className="inline-flex items-center gap-2 rounded-xl border border-[#BFD3CA] bg-white/80 px-5 py-3.5 text-sm font-bold text-[#245847] transition hover:border-[#24705D] hover:bg-white">Create your workspace <ArrowRight size={16} /></Link></div>
             <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-sm font-semibold text-[#517065]"><span className="inline-flex items-center gap-2"><Check size={16} className="text-[#28725E]" /> Built for hospitals & clinics</span><span className="inline-flex items-center gap-2"><Check size={16} className="text-[#28725E]" /> Set up in minutes</span></div>
           </div>
 

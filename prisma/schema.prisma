@@ -37,6 +37,13 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum AppointmentRequestStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  REJECTED
+}
+
 model Organization {
   id        String    @id @default(cuid())
   name      String
@@ -47,6 +54,7 @@ model Organization {
   invites   Invite[]
   invoices  Invoice[]
   appointments Appointment[]
+  appointmentRequests AppointmentRequest[]
 }
 
 model User {
@@ -64,6 +72,7 @@ model User {
   invoicesCreated    Invoice[]    @relation("InvoiceCreatedBy")
   paymentsRecorded   Payment[]    @relation("PaymentRecordedBy")
   appointments      Appointment[] @relation("DoctorAppointments")
+  appointmentRequests AppointmentRequest[] @relation("DoctorAppointmentRequests")
 }
 
 model Patient {
@@ -160,6 +169,26 @@ model Appointment {
 
   @@index([organizationId, scheduledAt])
   @@index([doctorId, scheduledAt])
+}
+
+model AppointmentRequest {
+  id              String                   @id @default(cuid())
+  patientName     String
+  patientEmail    String
+  patientPhone    String
+  reason          String?
+  requestedAt     DateTime
+  durationMinutes Int                      @default(30)
+  status          AppointmentRequestStatus @default(PENDING)
+  createdAt       DateTime                 @default(now())
+  respondedAt     DateTime?
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  doctor          User                     @relation("DoctorAppointmentRequests", fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId        String
+
+  @@index([doctorId, requestedAt])
+  @@index([organizationId, requestedAt])
 }
 
 model Prescription {
