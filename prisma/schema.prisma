@@ -85,8 +85,30 @@ model Patient {
   visits           Visit[]
   invoices         Invoice[]
   appointments     Appointment[]
+  portalAccount    PatientPortalAccount?
 
   @@unique([organizationId, mrn])
+}
+
+model PatientPortalAccount {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId    String   @unique
+  sessions     PatientPortalSession[]
+}
+
+model PatientPortalSession {
+  id        String               @id @default(cuid())
+  tokenHash String               @unique
+  expiresAt DateTime
+  createdAt DateTime             @default(now())
+  account   PatientPortalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+
+  @@index([accountId])
 }
 
 model Allergy {

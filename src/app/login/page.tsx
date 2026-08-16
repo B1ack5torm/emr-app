@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Stethoscope } from "lucide-react";
 
@@ -15,7 +15,6 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "1";
   const [email, setEmail] = useState("");
@@ -32,7 +31,7 @@ function LoginForm() {
     if (res?.error) {
       setError(res.error === "CredentialsSignin" ? "Invalid email or password." : res.error);
     } else {
-      router.push("/");
+      window.location.assign("/");
     }
   };
 
@@ -66,6 +65,9 @@ function LoginForm() {
 
         <p className="text-xs text-inkSoft mt-5 text-center">
           New here? <Link href="/register" className="text-accentDark font-semibold">Create an account</Link>
+        </p>
+        <p className="text-xs text-inkSoft mt-2 text-center">
+          Patient? <Link href="/patient-login" className="text-accentDark font-semibold">Open patient portal</Link>
         </p>
 
       </form>
