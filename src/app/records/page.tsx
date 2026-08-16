@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, User, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, Clock } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Search, User, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, Clock, Pencil, Save, X } from "lucide-react";
 import { AllergyBanner } from "@/components/shared";
 
 export default function RecordsPage() {
+  const { data: session } = useSession();
   const [query, setQuery] = useState("");
   const [patients, setPatients] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const canEdit = ["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes((session?.user as any)?.role || "");
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -18,7 +22,7 @@ export default function RecordsPage() {
   }, [query]);
 
   const toggle = async (id: string) => {
-    if (expanded === id) { setExpanded(null); return; }
+    if (expanded === id) { setExpanded(null); setEditing(null); return; }
     setExpanded(id);
     const res = await fetch(`/api/patients/${id}`);
     setDetail(await res.json());
@@ -53,6 +57,8 @@ export default function RecordsPage() {
               </div>
               {isOpen && detail?.id === p.id && (
                 <div className="px-4 pb-4">
+                  {canEdit && <div className="mb-3 flex justify-end"><button onClick={() => setEditing(editing === p.id ? null : p.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">{editing === p.id ? <><X size={13} /> Cancel editing</> : <><Pencil size={13} /> Edit patient</>}</button></div>}
+                  {editing === p.id ? <PatientEditForm patient={detail} onCancel={() => setEditing(null)} onSaved={(updated) => { setDetail((current: any) => ({ ...current, ...updated })); setPatients((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item)); setEditing(null); }} /> : <>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div><b>Phone:</b> {detail.phone || "—"}</div>
                     <div><b>Date of birth:</b> {detail.dateOfBirth ? new Date(detail.dateOfBirth).toLocaleDateString() : "—"}</div>
@@ -66,6 +72,7 @@ export default function RecordsPage() {
                     {detail.visits.length === 0 && <div className="text-sm text-inkSoft">No visits recorded yet.</div>}
                     {detail.visits.map((v: any) => <VisitRow key={v.id} visit={v} />)}
                   </div>
+                  </>}
                 </div>
               )}
             </div>
@@ -75,6 +82,52 @@ export default function RecordsPage() {
     </div>
   );
 }
+
+function PatientEditForm({ patient, onCancel, onSaved }: { patient: any; onCancel: () => void; onSaved: (patient: any) => void }) {
+  const [form, setForm] = useState({
+    name: patient.name || "", dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().slice(0, 10) : "",
+    age: String(patient.age ?? ""), gender: patient.gender || "", phone: patient.phone || "", email: patient.email || "",
+    bloodGroup: patient.bloodGroup || "", address: patient.address || "", emergencyContact: patient.emergencyContact || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const set = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const setDateOfBirth = (value: string) => {
+    let age = form.age;
+    if (value) {
+      const dob = new Date(`${value}T00:00:00`); const today = new Date();
+      let calculated = today.getFullYear() - dob.getFullYear();
+      if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) calculated--;
+      if (calculated >= 0) age = String(calculated);
+    }
+    setForm((current) => ({ ...current, dateOfBirth: value, age }));
+  };
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setError(""); setSaving(true);
+    const response = await fetch(`/api/patients/${patient.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, age: Number(form.age) }) });
+    const data = await response.json(); setSaving(false);
+    if (!response.ok) return setError(data.error || "Could not update the patient.");
+    onSaved(data);
+  };
+  return <form onSubmit={submit} className="mb-4 rounded-xl border border-border bg-[#FAF8F2] p-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <EditField label="Full name" required><input required value={form.name} onChange={(event) => set("name", event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Age" required><input required type="number" min={0} max={130} value={form.age} onChange={(event) => set("age", event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Gender" required><select required value={form.gender} onChange={(event) => set("gender", event.target.value)} className="record-edit-input"><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></EditField>
+      <EditField label="Phone"><input value={form.phone} onChange={(event) => set("phone", event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Email"><input type="email" value={form.email} onChange={(event) => set("email", event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Blood group"><input value={form.bloodGroup} onChange={(event) => set("bloodGroup", event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Emergency contact"><input value={form.emergencyContact} onChange={(event) => set("emergencyContact", event.target.value)} className="record-edit-input" /></EditField>
+      <EditField label="Address"><input value={form.address} onChange={(event) => set("address", event.target.value)} className="record-edit-input" /></EditField>
+    </div>
+    {error && <div className="mt-3 text-sm text-alert">{error}</div>}
+    <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold">Cancel</button><button disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-bold text-white disabled:opacity-60"><Save size={14} /> {saving ? "Saving…" : "Save changes"}</button></div>
+    <style jsx>{`.record-edit-input{width:100%;border:1px solid #E2DCCE;border-radius:8px;background:#fff;padding:8px 10px;font-size:14px}`}</style>
+  </form>;
+}
+
+function EditField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) { return <label className="block"><span className="mb-1 block text-xs font-bold uppercase text-inkSoft">{label}{required ? " *" : ""}</span>{children}</label>; }
 
 function VisitRow({ visit }: { visit: any }) {
   const [open, setOpen] = useState(false);
