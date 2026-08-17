@@ -3,10 +3,12 @@ import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { audit, requirePermission } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("patient:read");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
   const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
 
@@ -22,9 +24,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("patient:create");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
 
   const body = await req.json();
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     try {
       patient = await prisma.patient.create({
         data: {
-          mrn, name, age: Number(age), gender, phone, email: email?.trim() || null, address, bloodGroup, emergencyContact, organizationId,
+          mrn, name, age: Number(age), gender, phone, email: email?.trim() || null, address, bloodGroup, emergencyContact, organizationId, createdById: (session.user as any).id, updatedById: (session.user as any).id,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
           allergies: { create: (allergies || []).map((a: string) => ({ name: a })) }
         },
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!patient) return NextResponse.json({ error: "Could not assign a unique MRN. Please try again." }, { status: 503 });
+  await audit({ organizationId, userId: (session.user as any).id, patientId: patient.id, action: "PATIENT_CREATED", resourceType: "Patient", resourceId: patient.id, newValue: { mrn: patient.mrn }, request: req });
 
   return NextResponse.json(patient, { status: 201 });
 }

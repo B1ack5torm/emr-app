@@ -3,15 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendAppointmentNotifications } from "@/lib/appointment-notifications";
+import { audit, requirePermission } from "@/lib/security";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const user = session.user as any;
-  if (!["DOCTOR", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const access = await requirePermission("appointment:manage");
+  if (access.response) return access.response;
+  const user = access.user as any;
 
   const { action } = await req.json();
   if (!["confirm", "reject"].includes(action)) {
@@ -26,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const canRespond = user.role === "SUPER_ADMIN" ||
     (user.role === "DOCTOR" && appointmentRequest.doctorId === user.id) ||
-    (user.role === "ADMIN" && appointmentRequest.organizationId === user.organizationId);
+    (user.role !== "DOCTOR" && appointmentRequest.organizationId === user.organizationId);
   if (!canRespond) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (appointmentRequest.status !== "PENDING") {
     return NextResponse.json({ error: "This appointment request has already been reviewed." }, { status: 409 });
@@ -47,6 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     durationMinutes: appointmentRequest.durationMinutes,
     reason: appointmentRequest.reason,
   }) : undefined;
+  await audit({ organizationId: appointmentRequest.organizationId, userId: user.id, action: action === "confirm" ? "APPOINTMENT_REQUEST_CONFIRMED" : "APPOINTMENT_REQUEST_REJECTED", resourceType: "AppointmentRequest", resourceId: appointmentRequest.id, request: req });
 
   return NextResponse.json({ request: updated, notifications });
 }

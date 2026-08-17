@@ -2,17 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const allowedRoles = ["RECEPTION", "ADMIN", "SUPER_ADMIN"];
+import { audit, requirePermission } from "@/lib/security";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const user = session.user as any;
-  if (!allowedRoles.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("appointment:manage");
+  if (access.response) return access.response;
+  const user = access.user as any;
 
   const appointment = await prisma.appointmentRequest.findFirst({
-    where: { id: params.id, ...(user.role === "SUPER_ADMIN" ? {} : { organizationId: user.organizationId }) },
+    where: { id: params.id, organizationId: user.organizationId },
   });
   if (!appointment) return NextResponse.json({ error: "Online appointment not found." }, { status: 404 });
   if (appointment.status !== "CONFIRMED") return NextResponse.json({ error: "Only confirmed appointments can be checked in." }, { status: 409 });
@@ -48,6 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           phone: appointment.patientPhone,
           email: appointment.patientEmail,
           organizationId: appointment.organizationId,
+          createdById: user.id, updatedById: user.id,
         },
       });
     }
@@ -60,6 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     return { appointment: updated, patient, visit };
   });
+  await audit({ organizationId: appointment.organizationId, userId: user.id, patientId: result.patient.id, action: "APPOINTMENT_CHECKED_IN", resourceType: "AppointmentRequest", resourceId: appointment.id, request: req });
 
   return NextResponse.json(result);
 }

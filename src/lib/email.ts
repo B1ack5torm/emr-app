@@ -18,3 +18,13 @@ export async function sendInviteEmail(to: string, orgName: string, role: string,
     `,
   });
 }
+
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  if (!process.env.RESEND_API_KEY) return false;
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM || "CareChart <onboarding@resend.dev>", to,
+    subject: "Reset your CareChart password",
+    html: `<p>A password reset was requested for your CareChart account.</p><p><a href="${resetUrl}">Reset password</a></p><p>This link expires in 30 minutes. If you did not request it, you can ignore this email.</p>`,
+  });
+  return true;
+}

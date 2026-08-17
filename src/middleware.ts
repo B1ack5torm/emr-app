@@ -20,22 +20,25 @@ export default withAuth(
       return NextResponse.redirect(new URL("/", req.url));
     }
 
-    if (path.startsWith("/frontdesk") && !["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
+    if (path.startsWith("/frontdesk") && !["RECEPTION", "FRONT_DESK", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL(deniedDestination, req.url));
     }
-    if (path.startsWith("/appointments") && !["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
+    if (path.startsWith("/appointments") && !["RECEPTION", "FRONT_DESK", "NURSE", "DOCTOR", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL(deniedDestination, req.url));
     }
-    if (path.startsWith("/doctor") && !["DOCTOR", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
+    if (path.startsWith("/doctor") && !["DOCTOR", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL(deniedDestination, req.url));
     }
-    if (path.startsWith("/admin") && !["ADMIN", "SUPER_ADMIN"].includes(role || "")) {
+    if (path.startsWith("/admin") && !["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL(deniedDestination, req.url));
     }
-    if (path.startsWith("/billing") && !["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
+    if (path.startsWith("/billing") && !["RECEPTION", "BILLING", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL(deniedDestination, req.url));
     }
-    if (path.startsWith("/records") && !["RECEPTION", "DOCTOR", "ADMIN", "SUPER_ADMIN"].includes(role || "")) {
+    if (path.startsWith("/diagnostics") && !["DOCTOR", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) return NextResponse.redirect(new URL(deniedDestination, req.url));
+    if (path.startsWith("/documents") && !["DOCTOR", "NURSE", "RECEPTION", "FRONT_DESK", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) return NextResponse.redirect(new URL(deniedDestination, req.url));
+    if ((path.startsWith("/audit") || path.startsWith("/settings")) && !["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) return NextResponse.redirect(new URL(deniedDestination, req.url));
+    if (path.startsWith("/records") && !["RECEPTION", "FRONT_DESK", "NURSE", "DOCTOR", "BILLING", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) {
       return NextResponse.redirect(new URL(deniedDestination, req.url));
     }
     return NextResponse.next();
@@ -44,5 +47,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/frontdesk/:path*", "/appointments/:path*", "/doctor/:path*", "/records/:path*", "/admin/:path*", "/billing/:path*", "/patient/:path*", "/change-password", "/"],
+  matcher: ["/frontdesk/:path*", "/appointments/:path*", "/doctor/:path*", "/records/:path*", "/admin/:path*", "/billing/:path*", "/diagnostics/:path*", "/documents/:path*", "/audit/:path*", "/settings/:path*", "/patient/:path*", "/change-password", "/"],
 };

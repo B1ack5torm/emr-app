@@ -84,7 +84,7 @@ export default function RegisterPage() {
             <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Hospital / clinic name</label>
             <input required value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Riverside Medical Center"
               className="w-full border border-border rounded-lg px-3 py-2 mb-4 bg-[#FCFAF5]" />
-            <p className="text-xs text-inkSoft -mt-3 mb-4">You'll be the Admin for this organization and can approve staff who join it.</p>
+            <p className="text-xs text-inkSoft -mt-3 mb-4">You&apos;ll be the Admin for this organization and can approve staff who join it.</p>
           </>
         ) : (
           <>

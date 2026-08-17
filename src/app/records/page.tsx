@@ -104,7 +104,7 @@ function PatientEditForm({ patient, onCancel, onSaved }: { patient: any; onCance
   };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setError(""); setSaving(true);
-    const response = await fetch(`/api/patients/${patient.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, age: Number(form.age) }) });
+    const response = await fetch(`/api/patients/${patient.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, age: Number(form.age), version: patient.version }) });
     const data = await response.json(); setSaving(false);
     if (!response.ok) return setError(data.error || "Could not update the patient.");
     onSaved(data);
@@ -147,7 +147,7 @@ function VisitRow({ visit }: { visit: any }) {
         <div className="px-3 pb-3 text-sm flex flex-col gap-2">
           <div><b>Vitals:</b> BP {visit.bp || "—"}, Temp {visit.temperature || "—"}°F, Pulse {visit.pulse || "—"}, Wt {visit.weight || "—"}kg</div>
           {visit.diagnosis && <div><b>Diagnosis:</b> {visit.diagnosis}</div>}
-          {visit.doctorNotes && <div><b>Doctor's notes:</b> {visit.doctorNotes}</div>}
+          {visit.doctorNotes && <div><b>Doctor&apos;s notes:</b> {visit.doctorNotes}</div>}
           {visit.prescriptions?.length > 0 && (
             <div><b>Prescription:</b>
               <ul className="list-disc ml-5 mt-1">

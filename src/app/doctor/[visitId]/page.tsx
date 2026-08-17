@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer } from "lucide-react";
@@ -149,6 +149,8 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           </div>
         </div>
 
+        <DiagnosticOrderPanel visitId={visit.id} disabled={completed} />
+
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-inkSoft uppercase mb-2">
             Imaging order (sends HL7 to modality worklist)
@@ -157,7 +159,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
         </div>
 
         <div className="border-t border-border pt-4">
-          <div className="text-xs font-bold text-inkSoft uppercase mb-2">Doctor's signature</div>
+          <div className="text-xs font-bold text-inkSoft uppercase mb-2">Doctor&apos;s signature</div>
           <div className="text-sm mb-2">Signing as <b>{session?.user?.name}</b></div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={signConfirmed} onChange={(e) => setSignConfirmed(e.target.checked)} />
@@ -175,6 +177,44 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       <style jsx global>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; } .patient-report { display: none; } @media print { .consult-screen { display: none !important; } .patient-report { display: block !important; color: #17202A; font-family: Arial, sans-serif; } }`}</style>
     </div>
   );
+}
+
+type DiagnosticOrderSummary = { id: string; orderNumber: string; type: string; procedureName: string; priority: string; status: string; scheduledAt?: string };
+
+function DiagnosticOrderPanel({ visitId, disabled }: { visitId: string; disabled: boolean }) {
+  const [orders, setOrders] = useState<DiagnosticOrderSummary[]>([]);
+  const [form, setForm] = useState({ type: "LABORATORY", priority: "ROUTINE", procedureCode: "", procedureName: "", clinicalIndication: "", scheduledAt: "" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const load = useCallback(async () => {
+    const response = await fetch(`/api/diagnostic-orders?visitId=${visitId}&pageSize=100`);
+    const data = await response.json();
+    if (response.ok) setOrders(data.orders); else setError(data.error || "Could not load diagnostic orders.");
+  }, [visitId]);
+  useEffect(() => { void load(); }, [load]);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setSaving(true); setError("");
+    const response = await fetch("/api/diagnostic-orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, visitId, scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null }) });
+    const data = await response.json(); setSaving(false);
+    if (!response.ok) return setError(data.error || "Could not create the diagnostic order.");
+    setForm((current) => ({ ...current, procedureCode: "", procedureName: "", clinicalIndication: "", scheduledAt: "" }));
+    await load();
+  };
+  return <div className="rounded-lg border border-border bg-card p-4">
+    <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-inkSoft"><FlaskConical size={14} /> Operational diagnostic orders</div>
+    {!disabled && <form onSubmit={submit} className="grid gap-2 md:grid-cols-2">
+      <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })} className="input"><option value="LABORATORY">Laboratory</option><option value="IMAGING">Imaging</option></select>
+      <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} className="input"><option value="ROUTINE">Routine</option><option value="URGENT">Urgent</option><option value="STAT">STAT</option></select>
+      <input placeholder="Procedure name" required value={form.procedureName} onChange={(event) => setForm({ ...form, procedureName: event.target.value })} className="input" />
+      <input placeholder="Procedure/code (optional)" value={form.procedureCode} onChange={(event) => setForm({ ...form, procedureCode: event.target.value })} className="input" />
+      <textarea placeholder="Clinical indication" value={form.clinicalIndication} onChange={(event) => setForm({ ...form, clinicalIndication: event.target.value })} className="input min-h-[70px]" />
+      <label className="text-xs text-inkSoft">Schedule (optional)<input type="datetime-local" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} className="input mt-1" /></label>
+      <button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 md:col-span-2">{saving ? "Creating…" : "Create diagnostic order"}</button>
+    </form>}
+    {disabled && <p className="text-xs text-inkSoft">This encounter is finalized. New orders require an encounter amendment.</p>}
+    {error && <p className="mt-2 text-sm text-alert">{error}</p>}
+    <div className="mt-3 space-y-2">{orders.map((order) => <div key={order.id} className="rounded border border-border bg-[#FAF8F2] p-2 text-xs"><b>{order.procedureName}</b> · {order.type} · {order.priority}<p className="text-inkSoft">{order.orderNumber} · {order.status}{order.scheduledAt ? ` · ${new Date(order.scheduledAt).toLocaleString()}` : ""}</p></div>)}</div>
+  </div>;
 }
 
 function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, doctorName, signed }: { visit: any; notes: string; diagnosis: string; advice: string; prescriptions: Rx[]; tests: string[]; doctorName: string; signed: boolean }) {

@@ -1,7 +1,6 @@
-# CareChart EMR — starter web app
+# CareChart EMR — Phase 1 outpatient foundation
 
-A real, deployable version of the EMR prototype: Next.js (App Router) + PostgreSQL
-(via Prisma) + NextAuth for staff login, with two roles — Front Desk and Doctor.
+Next.js (App Router) + PostgreSQL (via Prisma) + NextAuth modular monolith for outpatient clinic operations. It is a development foundation, not a legal, security, or regulatory certification.
 
 ## What's included
 
@@ -10,7 +9,15 @@ A real, deployable version of the EMR prototype: Next.js (App Router) + PostgreS
 - **Doctor's Desk** — waiting queue, full chart with allergy alert, consultation
   form (notes, diagnosis, prescriptions, tests ordered), and digital sign-off.
 - **Patient Records** — searchable history of every patient and every past visit.
-- Role-based route protection (`middleware.ts`) and role checks in every API route.
+- Server-side permission checks, organization-scoped access, and append-only audit-event foundation.
+- Consent and privacy-request APIs, patient optimistic-locking/version fields, and final encounter immutability.
+- Durable login throttling, authentication audit events, account suspension, time-limited password resets, and eight-hour staff sessions.
+- Idempotent public bookings with booking references, privacy acceptance, serializable reservations, and status history.
+- Structured vitals/BMI, diagnoses, expanded prescriptions with allergy acknowledgement, and encounter amendments.
+- Clinic locations, departments, practitioner schedules, breaks, holidays, blocked periods, specialties, and appointment types.
+- Unified laboratory/imaging orders with controlled status transitions and review acknowledgement.
+- Service catalog, clinic prices, tax configuration, payment receipt numbers, and separately recorded refunds.
+- Protected PDF/JPEG/PNG document storage with random keys, tenant-checked downloads, size limits, checksums, AES-256-GCM encryption, and a fail-closed production malware-scanner adapter.
 - A normalized Postgres schema via Prisma (`prisma/schema.prisma`).
 
 ## 1. Install dependencies
@@ -49,11 +56,7 @@ npx prisma migrate dev --name init
 npm run prisma:seed
 ```
 
-This creates:
-- `reception@hospital.com` / `password123` (Front Desk role)
-- `doctor@hospital.com` / `password123` (Doctor role)
-
-Change these passwords before using real patient data.
+The seed is development-only and currently creates fictional staff with a known temporary password. Set a unique local seed password before any shared deployment; never use demo accounts or data in production.
 
 ## 5. Run it
 
@@ -71,11 +74,31 @@ Front Desk → see them appear in the Doctor's Desk queue → complete a consult
 - **Database**: use the hosted Postgres URL from Neon/Supabase/RDS as `DATABASE_URL` in production too.
 - After deploying, run `npx prisma migrate deploy` (instead of `migrate dev`) against the production database, then run the seed script once.
 
+## Operations
+
+Apply committed migrations in a deployed environment with `npx prisma migrate deploy`; use `npx prisma migrate dev` only for local development. Prisma migration rollback is forward-only: create a compensating migration and restore from a tested database backup when necessary. Backups should be encrypted, access-controlled, regularly restored into an isolated environment, and retained according to the clinic’s approved policy.
+
+`DATABASE_URL`, `NEXTAUTH_SECRET`, and notification settings are documented in `.env.example`. Keep `.env` out of source control. Default scheduling display is Asia/Kolkata, while database timestamps are stored in UTC.
+
+## Quality checks
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run test:integration
+npm run build
+```
+
+Database integration tests use fictional, uniquely named records and clean them up afterward. Run them only against a development or test database.
+
 ## Before using this with real patients
 
 This starter covers the core workflow but is not a compliance-ready product yet.
 Before real use, add:
 - HTTPS everywhere (handled automatically by Vercel/Railway) and strong, unique passwords for every account.
-- Audit logging — who viewed or edited each record, and when.
+- Complete MFA, document malware scanning, operational audit review, and the clinical amendment interface.
 - Data backup and retention policy.
 - A review against India's Digital Personal Data Protection Act and ABDM (Ayushman Bharat Digital Mission) guidelines for health record handling, since this is intended for a hospital in India.
+
+See [architecture](docs/ARCHITECTURE.md), [API overview](docs/API.md), [database and migration guide](docs/DATABASE.md), [permission matrix](docs/PERMISSIONS.md), and the [Phase 2 backlog](docs/PHASE_2_BACKLOG.md).

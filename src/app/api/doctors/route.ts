@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/security";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("appointment:manage");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
 
   const doctors = await prisma.user.findMany({
     where: { ...((session.user as any).role === "SUPER_ADMIN" ? {} : { organizationId: (session.user as any).organizationId }), role: "DOCTOR", status: "ACTIVE" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, practitionerProfile: { select: { specialty: true, clinic: { select: { id: true, name: true, appointmentTypes: { where: { active: true }, select: { id: true, name: true, durationMinutes: true } } } } } } },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(doctors);

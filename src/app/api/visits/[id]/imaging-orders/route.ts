@@ -4,14 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildORM } from "@/lib/hl7";
 import { sendHL7ViaMLLP } from "@/lib/mllp";
+import { audit, requirePermission } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["DOCTOR", "ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("order:create");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
 
   const organizationId = (session.user as any).organizationId;
   const visit = await prisma.visit.findUnique({ where: { id: params.id }, include: { patient: true } });
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const order = await prisma.imagingOrder.create({
     data: { accessionNumber, modality, procedureDescription, bodyPart, visitId: visit.id, status: "ORDERED" },
   });
+  await audit({ organizationId, userId: (session.user as any).id, patientId: visit.patientId, action: "DIAGNOSTIC_ORDER_CREATED", resourceType: "ImagingOrder", resourceId: order.id, newValue: { accessionNumber, modality }, request: req });
 
   const hl7Message = buildORM({ order, patient: visit.patient, orgName: org!.name });
 
@@ -62,8 +64,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("patient:read");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
 
   const visit = await prisma.visit.findUnique({ where: { id: params.id }, include: { patient: true } });

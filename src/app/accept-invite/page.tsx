@@ -79,7 +79,7 @@ function AcceptInviteForm() {
           <div className="font-serif font-bold text-lg">Join {invite?.organizationName}</div>
         </div>
         <p className="text-xs text-inkSoft mb-5">
-          You're accepting an invitation for <b>{invite?.email}</b> as <b>{roleLabel(invite?.role || "")}</b>.
+          You&apos;re accepting an invitation for <b>{invite?.email}</b> as <b>{roleLabel(invite?.role || "")}</b>.
         </p>
 
         <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Full name</label>

@@ -31,7 +31,7 @@ export default function FrontDeskPage() {
     return (
       <div className="text-center py-20">
         <CheckCircle2 size={40} className="mx-auto text-accent" />
-        <div className="font-serif text-lg mt-3">Visit logged — patient added to doctor's queue</div>
+        <div className="font-serif text-lg mt-3">Visit logged — patient added to doctor&apos;s queue</div>
       </div>
     );
   }
@@ -64,7 +64,7 @@ export default function FrontDeskPage() {
         </button>
       </div>
       <div className="flex items-center justify-center text-inkSoft border border-dashed border-border rounded-xl min-h-[300px] text-center p-6">
-        Search for a returning patient, or register a new one, to log today's visit.
+        Search for a returning patient, or register a new one, to log today&apos;s visit.
       </div>
     </div>
   );
@@ -180,7 +180,7 @@ function StartVisit({ patient, doctorId: initialDoctorId, onDone, onBack }: { pa
         <button onClick={onBack} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back</button>
       </div>
       <AllergyBanner allergies={patient.allergies.map((a) => a.name)} />
-      <div className="mt-5 text-xs font-bold text-inkSoft uppercase tracking-wide">Today's visit</div>
+      <div className="mt-5 text-xs font-bold text-inkSoft uppercase tracking-wide">Today&apos;s visit</div>
       <div className="flex flex-col gap-4 mt-2">
         <F label="Doctor" required><select required value={doctorId} onChange={(e) => setDoctorId(e.target.value)} className="input"><option value="" disabled>Select doctor</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>Dr. {doctor.name}</option>)}</select></F>
         <F label="Reason for visit / chief complaint">
@@ -194,7 +194,7 @@ function StartVisit({ patient, doctorId: initialDoctorId, onDone, onBack }: { pa
         </div>
       </div>
       <div className="flex justify-end mt-5">
-        <button onClick={submit} disabled={!doctorId} className="flex items-center gap-2 bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><Plus size={15} /> Add to doctor's queue</button>
+        <button onClick={submit} disabled={!doctorId} className="flex items-center gap-2 bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><Plus size={15} /> Add to doctor&apos;s queue</button>
       </div>
       <style jsx>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
     </div>

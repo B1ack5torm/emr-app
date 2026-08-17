@@ -3,10 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { audit, requirePermission } from "@/lib/security";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("patient:read");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
   const role = (session.user as any).role;
 
@@ -16,21 +18,23 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
 
   if (!patient || (role !== "SUPER_ADMIN" && patient.organizationId !== organizationId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await audit({ organizationId: patient.organizationId, userId: (session.user as any).id, patientId: patient.id, action: "PATIENT_VIEWED", resourceType: "Patient", resourceId: patient.id, request: _req });
   return NextResponse.json(patient);
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("patient:update");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const role = (session.user as any).role;
-  if (!["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes(role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const patient = await prisma.patient.findUnique({ where: { id: params.id }, select: { organizationId: true, portalAccount: { select: { id: true } } } });
+  const patient = await prisma.patient.findUnique({ where: { id: params.id }, select: { organizationId: true, version: true, portalAccount: { select: { id: true } } } });
   if (!patient || (role !== "SUPER_ADMIN" && patient.organizationId !== (session.user as any).organizationId)) {
     return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   }
 
   const body = await req.json();
+  if (!Number.isInteger(body.version) || body.version !== patient.version) return NextResponse.json({ error: "This patient record changed. Refresh and try again." }, { status: 409 });
   const name = String(body.name || "").trim();
   const gender = String(body.gender || "");
   const age = Number(body.age);
@@ -55,10 +59,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           bloodGroup: String(body.bloodGroup || "").trim() || null,
           address: String(body.address || "").trim() || null,
           emergencyContact: String(body.emergencyContact || "").trim() || null,
+          version: { increment: 1 }, updatedById: (session.user as any).id,
         },
         include: { allergies: true, visits: { select: { id: true, status: true } } },
       });
     });
+    await audit({ organizationId: patient.organizationId, userId: (session.user as any).id, patientId: params.id, action: "PATIENT_UPDATED", resourceType: "Patient", resourceId: params.id, newValue: { version: updated.version }, request: req });
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

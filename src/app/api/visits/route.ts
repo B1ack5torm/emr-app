@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { audit, requirePermission } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("encounter:create");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
   const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
 
@@ -22,9 +24,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("encounter:create");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
 
   const body = await req.json();
@@ -38,5 +40,6 @@ export async function POST(req: NextRequest) {
   if (!doctor) return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
 
   const visit = await prisma.visit.create({ data: { patientId, doctorId, chiefComplaint, bp, temperature, pulse, weight, status: "WAITING" } });
+  await audit({ organizationId, userId: (session.user as any).id, patientId, action: "ENCOUNTER_CREATED", resourceType: "Visit", resourceId: visit.id, request: req });
   return NextResponse.json(visit, { status: 201 });
 }

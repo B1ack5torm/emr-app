@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ItemCategory } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-function computeTotals<T extends { quantity: number; unitPrice: number; taxRatePercent: number }>(items: T[]) {
-  let subtotal = 0, taxTotal = 0;
-  const computed = items.map((it) => {
-    const amount = it.quantity * it.unitPrice;
-    const taxAmount = Math.round((amount * it.taxRatePercent) / 100);
-    subtotal += amount; taxTotal += taxAmount;
-    return { ...it, amount, taxAmount, total: amount + taxAmount };
-  });
-  return { computed, subtotal, taxTotal, grandTotal: subtotal + taxTotal };
-}
+import { audit, requirePermission } from "@/lib/security";
+import { calculateInvoice } from "@/lib/domain/billing";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePermission("invoice:create");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
 
   const invoice = await prisma.invoice.findUnique({
@@ -28,9 +21,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("invoice:create");
+  if (access.response) return access.response;
+  const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
   const userId = (session.user as any).id;
 
@@ -47,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     ...visit.testsOrdered.map((t) => ({ category: "TEST" as const, description: t.name, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
     ...visit.imagingOrders.map((o) => ({ category: "IMAGING" as const, description: `${o.procedureDescription}${o.bodyPart ? " - " + o.bodyPart : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
   ];
-  const { computed, subtotal, taxTotal, grandTotal } = computeTotals(draftItems);
+  const { items: computed, subtotal, taxTotal, grandTotal } = calculateInvoice(draftItems);
 
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
@@ -58,11 +51,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             invoiceNo: (agg._max.invoiceNo || 0) + 1,
             visitId: visit.id, patientId: visit.patientId, organizationId,
             subtotal, taxTotal, grandTotal, status: "UNPAID", createdById: userId,
-            items: { create: computed },
+            items: { create: computed.map(({ discount, category, ...item }) => ({ ...item, category: category as ItemCategory, discountAmount: discount })) },
           },
           include: { items: true },
         });
       });
+      await audit({ organizationId, userId, patientId: visit.patientId, action: "INVOICE_CREATED", resourceType: "Invoice", resourceId: invoice.id, newValue: { invoiceNo: invoice.invoiceNo, grandTotal: invoice.grandTotal }, request: req });
       return NextResponse.json(invoice, { status: 201 });
     } catch (e: any) {
       if (e.code === "P2002" && attempt < 4) continue;

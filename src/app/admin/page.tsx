@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, XCircle, ShieldCheck, Clock, Mail, Send, UserPlus } from "lucide-react";
 
 type StaffUser = { id: string; name: string; email: string; role: string | null; status: string; createdAt: string };
 type PendingInvite = { id: string; email: string; role: string; expiresAt: string; createdAt: string };
+
+async function readJson(response: Response) {
+  const body = await response.text();
+  const data = body ? JSON.parse(body) : {};
+  if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+  return data;
+}
 
 export default function AdminPage() {
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -28,14 +35,7 @@ export default function AdminPage() {
   const [manualSuccess, setManualSuccess] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const readJson = async (response: Response) => {
-    const body = await response.text();
-    const data = body ? JSON.parse(body) : {};
-    if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
-    return data;
-  };
-
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoadError("");
     try {
       const [u, i] = await Promise.all([
@@ -49,9 +49,9 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, [load]);
 
   const pending = users.filter((u) => u.status === "PENDING");
   const active = users.filter((u) => u.status === "ACTIVE");
@@ -134,6 +134,7 @@ export default function AdminPage() {
             <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm">
               <option value="RECEPTION">Front Desk</option>
               <option value="DOCTOR">Doctor</option>
+              <option value="NURSE">Nurse</option><option value="BILLING">Billing</option><option value="LAB_RADIOLOGY">Lab / Radiology</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>
@@ -178,13 +179,14 @@ export default function AdminPage() {
             </div>
             <div className="min-w-[140px]">
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Password</label>
-              <input type="password" required minLength={8} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+              <input type="password" required minLength={12} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Role</label>
               <select value={manualRole} onChange={(e) => setManualRole(e.target.value)} className="border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm">
                 <option value="RECEPTION">Front Desk</option>
                 <option value="DOCTOR">Doctor</option>
+                <option value="NURSE">Nurse</option><option value="BILLING">Billing</option><option value="LAB_RADIOLOGY">Lab / Radiology</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
@@ -213,6 +215,7 @@ export default function AdminPage() {
                   <select value={pendingRoleChoice[u.id] || "RECEPTION"} onChange={(e) => setPendingRoleChoice({ ...pendingRoleChoice, [u.id]: e.target.value })} className="border border-border rounded-lg px-2 py-1.5 text-sm bg-[#FCFAF5]">
                     <option value="RECEPTION">Front Desk</option>
                     <option value="DOCTOR">Doctor</option>
+                    <option value="NURSE">Nurse</option><option value="BILLING">Billing</option><option value="LAB_RADIOLOGY">Lab / Radiology</option>
                   </select>
                   <button onClick={() => approve(u.id)} className="flex items-center gap-1 bg-accent text-white text-sm font-semibold px-3 py-1.5 rounded-lg"><CheckCircle2 size={14} /> Approve</button>
                   <button onClick={() => reject(u.id)} className="flex items-center gap-1 text-alert text-sm font-semibold px-3 py-1.5 rounded-lg border border-alertSoft"><XCircle size={14} /> Reject</button>
@@ -237,6 +240,7 @@ export default function AdminPage() {
                   {u.role === "SUPER_ADMIN" && <option value="SUPER_ADMIN">Super Admin</option>}
                   <option value="RECEPTION">Front Desk</option>
                   <option value="DOCTOR">Doctor</option>
+                  <option value="NURSE">Nurse</option><option value="BILLING">Billing</option><option value="LAB_RADIOLOGY">Lab / Radiology</option>
                   <option value="ADMIN">Admin</option>
                 </select>
                 {u.role !== "SUPER_ADMIN" && <button onClick={() => deleteUser(u.id, u.name)} className="text-alert text-xs font-semibold border border-alertSoft rounded-lg px-3 py-1.5">Remove</button>}
