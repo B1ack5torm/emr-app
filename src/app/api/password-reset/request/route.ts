@@ -17,8 +17,10 @@ export async function POST(request: NextRequest) {
   if (recent >= 3) return NextResponse.json({ message: "If an account exists, reset instructions will be sent." });
   const token = randomBytes(32).toString("base64url");
   await prisma.passwordResetToken.create({ data: { userId: user.id, tokenHash: hash(token), expiresAt: new Date(Date.now() + 30 * 60 * 1000) } });
-  const origin = new URL(request.url).origin;
-  await sendPasswordResetEmail(user.email, `${origin}/reset-password?token=${encodeURIComponent(token)}`);
+  const appUrl = process.env.NEXTAUTH_URL?.trim() || new URL(request.url).origin;
+  const resetUrl = new URL("/reset-password", appUrl);
+  resetUrl.searchParams.set("token", token);
+  await sendPasswordResetEmail(user.email, resetUrl.toString());
   await audit({ organizationId: user.organizationId, userId: user.id, action: "PASSWORD_RESET_REQUESTED", resourceType: "User", resourceId: user.id, request });
   return NextResponse.json({ message: "If an account exists, reset instructions will be sent." });
 }
