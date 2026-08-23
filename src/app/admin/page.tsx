@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { CheckCircle2, XCircle, ShieldCheck, Clock, Mail, Send, UserPlus } from "lucide-react";
 
 type StaffUser = { id: string; name: string; email: string; role: string | null; status: string; createdAt: string };
@@ -14,6 +15,8 @@ async function readJson(response: Response) {
 }
 
 export default function AdminPage() {
+  const { data: session } = useSession();
+  const isSuperAdmin = (session?.user as any)?.role === "SUPER_ADMIN";
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,14 @@ export default function AdminPage() {
   const [manualError, setManualError] = useState("");
   const [manualSuccess, setManualSuccess] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const [hospitalName, setHospitalName] = useState("");
+  const [hospitalAdminName, setHospitalAdminName] = useState("");
+  const [hospitalAdminEmail, setHospitalAdminEmail] = useState("");
+  const [hospitalAdminPassword, setHospitalAdminPassword] = useState("");
+  const [hospitalError, setHospitalError] = useState("");
+  const [hospitalSuccess, setHospitalSuccess] = useState("");
+  const [creatingHospital, setCreatingHospital] = useState(false);
 
   const load = useCallback(async () => {
     setLoadError("");
@@ -88,6 +99,20 @@ export default function AdminPage() {
     load();
   };
 
+  const createHospital = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setHospitalError(""); setHospitalSuccess(""); setCreatingHospital(true);
+    const res = await fetch("/api/organizations", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hospitalName, adminName: hospitalAdminName, adminEmail: hospitalAdminEmail, adminPassword: hospitalAdminPassword }),
+    });
+    const data = await res.json();
+    setCreatingHospital(false);
+    if (!res.ok) { setHospitalError(data.error || "Could not create hospital account."); return; }
+    setHospitalSuccess(`${data.name} was created and ${hospitalAdminEmail} is its administrator.`);
+    setHospitalName(""); setHospitalAdminName(""); setHospitalAdminEmail(""); setHospitalAdminPassword("");
+  };
+
   const revokeInvite = async (id: string) => {
     await fetch(`/api/admin/invites/${id}`, { method: "DELETE" });
     load();
@@ -121,6 +146,19 @@ export default function AdminPage() {
     <div>
       <div className="font-serif text-lg font-semibold mb-1 flex items-center gap-2"><ShieldCheck size={18} /> Admin</div>
       <p className="text-sm text-inkSoft mb-6">Invite staff, approve join requests, and manage roles for your organization.</p>
+
+      {isSuperAdmin && <div className="mb-8">
+        <div className="text-xs font-bold text-inkSoft uppercase mb-2 flex items-center gap-1.5"><ShieldCheck size={13} /> Create hospital account</div>
+        <form onSubmit={createHospital} className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
+          <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Hospital / clinic name</label><input required value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <div className="min-w-[160px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator name</label><input required value={hospitalAdminName} onChange={(e) => setHospitalAdminName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator email</label><input type="email" required value={hospitalAdminEmail} onChange={(e) => setHospitalAdminEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <div className="min-w-[150px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Temporary password</label><input type="password" required minLength={12} value={hospitalAdminPassword} onChange={(e) => setHospitalAdminPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <button disabled={creatingHospital} className="flex items-center gap-2 bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg"><ShieldCheck size={14} /> {creatingHospital ? "Creating…" : "Create hospital"}</button>
+        </form>
+        {hospitalError && <div className="text-alert text-sm mt-2">{hospitalError}</div>}
+        {hospitalSuccess && <div className="text-accentDark text-sm mt-2">{hospitalSuccess}</div>}
+      </div>}
 
       <div className="mb-8">
         <div className="text-xs font-bold text-inkSoft uppercase mb-2 flex items-center gap-1.5"><Mail size={13} /> Invite staff by email</div>
