@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   ADMIN
+  PHARMACIST
   RECEPTION
   DOCTOR
   CLINIC_ADMIN
@@ -25,6 +26,72 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   REJECTED
+}
+
+enum IdentifierUse {
+  USUAL
+  OFFICIAL
+  TEMP
+  SECONDARY
+  OLD
+}
+
+enum ClinicalStatus {
+  ACTIVE
+  INACTIVE
+  RESOLVED
+  REMISSION
+  RECURRENCE
+  ENTERED_IN_ERROR
+}
+
+enum VerificationStatus {
+  UNCONFIRMED
+  PROVISIONAL
+  DIFFERENTIAL
+  CONFIRMED
+  REFUTED
+  ENTERED_IN_ERROR
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+  LIFE_THREATENING
+  UNKNOWN
+}
+
+enum MedicationStatementStatus {
+  ACTIVE
+  COMPLETED
+  ENTERED_IN_ERROR
+  INTENDED
+  STOPPED
+  ON_HOLD
+  UNKNOWN
+}
+
+enum ObservationInterpretation {
+  NORMAL
+  ABNORMAL
+  HIGH
+  LOW
+  CRITICAL_HIGH
+  CRITICAL_LOW
+  POSITIVE
+  NEGATIVE
+  INDETERMINATE
+}
+
+enum ObservationStatus {
+  PRELIMINARY
+  FINAL
+  AMENDED
+  CORRECTED
+  CANCELLED
+  ENTERED_IN_ERROR
+  UNKNOWN
 }
 
 enum Gender {
@@ -63,186 +130,197 @@ enum AppointmentRequestStatus {
 }
 
 model Organization {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  createdAt DateTime  @default(now())
-  users     User[]
-  patients  Patient[]
-  invites   Invite[]
-  invoices  Invoice[]
-  appointments Appointment[]
-  appointmentRequests AppointmentRequest[]
-  auditEvents AuditEvent[]
-  consents Consent[]
-  privacyRequests PrivacyRequest[]
-  loginAttempts LoginAttempt[]
-  clinics ClinicLocation[]
-  departments Department[]
-  practitionerProfiles PractitionerProfile[]
-  blockedPeriods BlockedPeriod[]
-  holidays Holiday[]
-  appointmentTypes AppointmentType[]
-  diagnosticOrders DiagnosticOrder[]
-  serviceCatalog ServiceCatalogItem[]
-  clinicPrices ClinicPrice[]
-  taxConfigurations TaxConfiguration[]
-  refunds Refund[]
-  documents StoredDocument[]
+  id                     String                  @id @default(cuid())
+  name                   String
+  slug                   String                  @unique
+  createdAt              DateTime                @default(now())
+  users                  User[]
+  patients               Patient[]
+  invites                Invite[]
+  invoices               Invoice[]
+  appointments           Appointment[]
+  appointmentRequests    AppointmentRequest[]
+  auditEvents            AuditEvent[]
+  consents               Consent[]
+  privacyRequests        PrivacyRequest[]
+  loginAttempts          LoginAttempt[]
+  clinics                ClinicLocation[]
+  departments            Department[]
+  practitionerProfiles   PractitionerProfile[]
+  blockedPeriods         BlockedPeriod[]
+  holidays               Holiday[]
+  appointmentTypes       AppointmentType[]
+  diagnosticOrders       DiagnosticOrder[]
+  serviceCatalog         ServiceCatalogItem[]
+  clinicPrices           ClinicPrice[]
+  taxConfigurations      TaxConfiguration[]
+  refunds                Refund[]
+  documents              StoredDocument[]
+  patientIdentifiers     PatientIdentifier[]
+  patientMergeRecords    PatientMergeRecord[]
+  clinicalProblems       ClinicalProblem[]
+  medicationStatements   MedicationStatement[]
+  immunizationRecords    ImmunizationRecord[]
+  patientProcedures      PatientProcedure[]
+  clinicalFlags          ClinicalFlag[]
+  diagnosticObservations DiagnosticObservation[]
+  pharmacyOrders         PharmacyOrder[]
+  pharmacyInvoices       PharmacyInvoice[]
 }
 
 model User {
-  id                 String       @id @default(cuid())
-  name               String
-  email              String       @unique
-  passwordHash       String
-  role               Role?
-  status             UserStatus   @default(PENDING)
-  mustChangePassword Boolean      @default(false)
-  createdAt          DateTime     @default(now())
-  organization       Organization @relation(fields: [organizationId], references: [id])
-  organizationId     String
-  visits             Visit[]      @relation("DoctorVisits")
-  invoicesCreated    Invoice[]    @relation("InvoiceCreatedBy")
-  paymentsRecorded   Payment[]    @relation("PaymentRecordedBy")
-  appointments      Appointment[] @relation("DoctorAppointments")
-  appointmentRequests AppointmentRequest[] @relation("DoctorAppointmentRequests")
-  lastLoginAt        DateTime?
-  passwordChangedAt DateTime?
-  practitionerProfile PractitionerProfile?
-  diagnosticOrders DiagnosticOrder[] @relation("DiagnosticOrderPractitioner")
+  id                      String               @id @default(cuid())
+  name                    String
+  email                   String               @unique
+  passwordHash            String
+  role                    Role?
+  status                  UserStatus           @default(PENDING)
+  mustChangePassword      Boolean              @default(false)
+  createdAt               DateTime             @default(now())
+  organization            Organization         @relation(fields: [organizationId], references: [id])
+  organizationId          String
+  visits                  Visit[]              @relation("DoctorVisits")
+  invoicesCreated         Invoice[]            @relation("InvoiceCreatedBy")
+  paymentsRecorded        Payment[]            @relation("PaymentRecordedBy")
+  appointments            Appointment[]        @relation("DoctorAppointments")
+  appointmentRequests     AppointmentRequest[] @relation("DoctorAppointmentRequests")
+  lastLoginAt             DateTime?
+  passwordChangedAt       DateTime?
+  practitionerProfile     PractitionerProfile?
+  diagnosticOrders        DiagnosticOrder[]    @relation("DiagnosticOrderPractitioner")
+  pharmacyInvoicesCreated PharmacyInvoice[]
 }
 
 model ClinicLocation {
-  id String @id @default(cuid())
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name String
-  code String
-  address String?
-  phone String?
-  timezone String @default("Asia/Kolkata")
-  active Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  departments Department[]
-  practitioners PractitionerProfile[]
-  blockedPeriods BlockedPeriod[]
-  holidays Holiday[]
-  appointmentTypes AppointmentType[]
-  appointments Appointment[]
+  id                  String                @id @default(cuid())
+  organizationId      String
+  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                String
+  code                String
+  address             String?
+  phone               String?
+  timezone            String                @default("Asia/Kolkata")
+  active              Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  departments         Department[]
+  practitioners       PractitionerProfile[]
+  blockedPeriods      BlockedPeriod[]
+  holidays            Holiday[]
+  appointmentTypes    AppointmentType[]
+  appointments        Appointment[]
   appointmentRequests AppointmentRequest[]
-  diagnosticOrders DiagnosticOrder[]
-  clinicPrices ClinicPrice[]
-  taxConfigurations TaxConfiguration[]
+  diagnosticOrders    DiagnosticOrder[]
+  clinicPrices        ClinicPrice[]
+  taxConfigurations   TaxConfiguration[]
 
   @@unique([organizationId, code])
   @@index([organizationId, active])
 }
 
 model Department {
-  id String @id @default(cuid())
+  id             String                @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  name String
-  active Boolean @default(true)
-  practitioners PractitionerProfile[]
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         ClinicLocation        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  name           String
+  active         Boolean               @default(true)
+  practitioners  PractitionerProfile[]
 
   @@unique([clinicId, name])
   @@index([organizationId, active])
 }
 
 model PractitionerProfile {
-  id String @id @default(cuid())
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  departmentId String?
-  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  specialty String
-  qualification String?
-  registrationNumber String?
-  defaultAppointmentMinutes Int @default(30)
-  active Boolean @default(true)
-  schedules PractitionerSchedule[]
-  blockedPeriods BlockedPeriod[]
+  id                        String                 @id @default(cuid())
+  organizationId            String
+  organization              Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId                    String                 @unique
+  user                      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinicId                  String
+  clinic                    ClinicLocation         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  departmentId              String?
+  department                Department?            @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  specialty                 String
+  qualification             String?
+  registrationNumber        String?
+  defaultAppointmentMinutes Int                    @default(30)
+  active                    Boolean                @default(true)
+  schedules                 PractitionerSchedule[]
+  blockedPeriods            BlockedPeriod[]
 
   @@index([organizationId, clinicId, specialty, active])
 }
 
 model PractitionerSchedule {
-  id String @id @default(cuid())
-  practitionerId String
-  practitioner PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
-  dayOfWeek Int
-  startMinute Int
-  endMinute Int
-  appointmentMinutes Int @default(30)
-  validFrom DateTime?
-  validTo DateTime?
-  active Boolean @default(true)
-  breaks ScheduleBreak[]
+  id                 String              @id @default(cuid())
+  practitionerId     String
+  practitioner       PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  dayOfWeek          Int
+  startMinute        Int
+  endMinute          Int
+  appointmentMinutes Int                 @default(30)
+  validFrom          DateTime?
+  validTo            DateTime?
+  active             Boolean             @default(true)
+  breaks             ScheduleBreak[]
 
   @@unique([practitionerId, dayOfWeek, startMinute, endMinute])
   @@index([practitionerId, dayOfWeek, active])
 }
 
 model ScheduleBreak {
-  id String @id @default(cuid())
-  scheduleId String
-  schedule PractitionerSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  id          String               @id @default(cuid())
+  scheduleId  String
+  schedule    PractitionerSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   startMinute Int
-  endMinute Int
-  label String?
+  endMinute   Int
+  label       String?
 
   @@index([scheduleId])
 }
 
 model BlockedPeriod {
-  id String @id @default(cuid())
+  id             String               @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         ClinicLocation       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   practitionerId String?
-  practitioner PractitionerProfile? @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
-  startsAt DateTime
-  endsAt DateTime
-  reason String
-  createdById String
+  practitioner   PractitionerProfile? @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  startsAt       DateTime
+  endsAt         DateTime
+  reason         String
+  createdById    String
 
   @@index([organizationId, clinicId, startsAt, endsAt])
   @@index([practitionerId, startsAt, endsAt])
 }
 
 model Holiday {
-  id String @id @default(cuid())
+  id             String         @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  date DateTime
-  name String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  date           DateTime
+  name           String
 
   @@unique([clinicId, date])
   @@index([organizationId, date])
 }
 
 model AppointmentType {
-  id String @id @default(cuid())
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  name String
-  durationMinutes Int @default(30)
-  active Boolean @default(true)
-  appointments Appointment[]
+  id                  String               @id @default(cuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId            String
+  clinic              ClinicLocation       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  name                String
+  durationMinutes     Int                  @default(30)
+  active              Boolean              @default(true)
+  appointments        Appointment[]
   appointmentRequests AppointmentRequest[]
 
   @@unique([clinicId, name])
@@ -265,45 +343,101 @@ model LoginAttempt {
 }
 
 model Patient {
-  id               String       @id @default(cuid())
-  mrn              String
-  name             String
-  age              Int
-  dateOfBirth      DateTime?
-  gender           Gender
-  phone            String?
-  email            String?
-  address          String?
-  bloodGroup       String?
-  emergencyContact String?
-  createdAt        DateTime     @default(now())
-  organization     Organization @relation(fields: [organizationId], references: [id])
-  organizationId   String
-  allergies        Allergy[]
-  visits           Visit[]
-  invoices         Invoice[]
-  appointments     Appointment[]
-  portalAccount    PatientPortalAccount?
-  active           Boolean      @default(true)
-  version          Int          @default(1)
-  createdById      String?
-  updatedById      String?
-  updatedAt        DateTime     @updatedAt
-  consents         Consent[]
-  privacyRequests  PrivacyRequest[]
-  diagnosticOrders DiagnosticOrder[]
-  documents StoredDocument[]
+  id                     String                  @id @default(cuid())
+  mrn                    String
+  name                   String
+  age                    Int
+  dateOfBirth            DateTime?
+  gender                 Gender
+  phone                  String?
+  email                  String?
+  address                String?
+  bloodGroup             String?
+  emergencyContact       String?
+  createdAt              DateTime                @default(now())
+  organization           Organization            @relation(fields: [organizationId], references: [id])
+  organizationId         String
+  allergies              Allergy[]
+  visits                 Visit[]
+  invoices               Invoice[]
+  appointments           Appointment[]
+  portalAccount          PatientPortalAccount?
+  active                 Boolean                 @default(true)
+  version                Int                     @default(1)
+  createdById            String?
+  updatedById            String?
+  updatedAt              DateTime                @updatedAt
+  consents               Consent[]
+  privacyRequests        PrivacyRequest[]
+  diagnosticOrders       DiagnosticOrder[]
+  documents              StoredDocument[]
+  identifiers            PatientIdentifier[]
+  problems               ClinicalProblem[]
+  medicationStatements   MedicationStatement[]
+  immunizations          ImmunizationRecord[]
+  procedures             PatientProcedure[]
+  clinicalFlags          ClinicalFlag[]
+  diagnosticObservations DiagnosticObservation[]
+  mergedIntoId           String?
+  mergedInto             Patient?                @relation("PatientMerge", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  mergedPatients         Patient[]               @relation("PatientMerge")
+  sourceMergeRecords     PatientMergeRecord[]    @relation("MergeSourcePatient")
+  targetMergeRecords     PatientMergeRecord[]    @relation("MergeTargetPatient")
+  pharmacyOrders         PharmacyOrder[]
+  pharmacyInvoices       PharmacyInvoice[]
 
   @@unique([organizationId, mrn])
+  @@index([organizationId, name])
+  @@index([organizationId, phone])
+  @@index([organizationId, email])
+  @@index([organizationId, dateOfBirth])
+  @@index([mergedIntoId])
+}
+
+model PatientIdentifier {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type           String
+  system         String
+  value          String
+  use            IdentifierUse @default(USUAL)
+  active         Boolean       @default(true)
+  verifiedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, system, value])
+  @@index([patientId, active])
+}
+
+model PatientMergeRecord {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  sourcePatientId String
+  sourcePatient   Patient      @relation("MergeSourcePatient", fields: [sourcePatientId], references: [id], onDelete: Restrict)
+  targetPatientId String
+  targetPatient   Patient      @relation("MergeTargetPatient", fields: [targetPatientId], references: [id], onDelete: Restrict)
+  mergedById      String
+  reason          String
+  sourceSnapshot  Json
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([sourcePatientId])
+  @@index([targetPatientId])
 }
 
 model PatientPortalAccount {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String                 @id @default(cuid())
+  email        String                 @unique
   passwordHash String
-  createdAt    DateTime @default(now())
-  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId    String   @unique
+  createdAt    DateTime               @default(now())
+  patient      Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId    String                 @unique
   sessions     PatientPortalSession[]
 }
 
@@ -319,136 +453,270 @@ model PatientPortalSession {
 }
 
 model Allergy {
-  id        String  @id @default(cuid())
-  name      String
-  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId String
+  id                 String             @id @default(cuid())
+  name               String
+  patient            Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId          String
+  code               String?
+  codingSystem       String?
+  category           String?
+  clinicalStatus     ClinicalStatus     @default(ACTIVE)
+  verificationStatus VerificationStatus @default(UNCONFIRMED)
+  reaction           String?
+  severity           AllergySeverity    @default(UNKNOWN)
+  onsetDate          DateTime?
+  recordedById       String?
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([patientId, clinicalStatus])
+}
+
+model ClinicalProblem {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId          String
+  patient            Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  code               String?
+  codingSystem       String?
+  description        String
+  clinicalStatus     ClinicalStatus     @default(ACTIVE)
+  verificationStatus VerificationStatus @default(CONFIRMED)
+  onsetDate          DateTime?
+  resolvedDate       DateTime?
+  notes              String?
+  recordedById       String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([organizationId, patientId, clinicalStatus])
+  @@index([code, codingSystem])
+}
+
+model MedicationStatement {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  medication     String
+  medicationCode String?
+  codingSystem   String?
+  status         MedicationStatementStatus @default(ACTIVE)
+  dose           String?
+  dosageUnit     String?
+  route          String?
+  frequency      String?
+  reason         String?
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  source         String                    @default("CLINICIAN_REPORTED")
+  notes          String?
+  recordedById   String
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([organizationId, patientId, status])
+  @@index([medicationCode, codingSystem])
+}
+
+model ImmunizationRecord {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  vaccine        String
+  vaccineCode    String?
+  codingSystem   String?
+  status         String       @default("COMPLETED")
+  occurrenceDate DateTime
+  lotNumber      String?
+  manufacturer   String?
+  site           String?
+  route          String?
+  doseQuantity   String?
+  reason         String?
+  performer      String?
+  source         String       @default("CLINICIAN_REPORTED")
+  notes          String?
+  recordedById   String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, patientId, occurrenceDate])
+}
+
+model PatientProcedure {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  description    String
+  code           String?
+  codingSystem   String?
+  status         String       @default("COMPLETED")
+  performedAt    DateTime?
+  performer      String?
+  bodySite       String?
+  outcome        String?
+  notes          String?
+  recordedById   String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, patientId, performedAt])
+}
+
+model ClinicalFlag {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  category       String
+  code           String?
+  title          String
+  description    String?
+  severity       AllergySeverity @default(UNKNOWN)
+  active         Boolean         @default(true)
+  startsAt       DateTime        @default(now())
+  endsAt         DateTime?
+  recordedById   String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId, patientId, active])
 }
 
 model Visit {
-  id             String         @id @default(cuid())
-  status         VisitStatus    @default(WAITING)
-  chiefComplaint String?
-  bp             String?
-  temperature    String?
-  pulse          String?
-  weight         String?
-  diagnosis      String?
-  doctorNotes    String?
-  advice         String?
-  signedAt       DateTime?
-  createdAt      DateTime       @default(now())
-  patient        Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId      String
-  doctor         User?          @relation("DoctorVisits", fields: [doctorId], references: [id], onDelete: SetNull)
-  doctorId       String?
-  prescriptions  Prescription[]
-  testsOrdered   TestOrder[]
-  imagingOrders  ImagingOrder[]
-  invoice       Invoice?
-  appointment   Appointment? @relation("AppointmentVisit", fields: [appointmentId], references: [id])
-  appointmentId String?      @unique
-  reasonForVisit String?
+  id                      String               @id @default(cuid())
+  status                  VisitStatus          @default(WAITING)
+  chiefComplaint          String?
+  bp                      String?
+  temperature             String?
+  pulse                   String?
+  weight                  String?
+  diagnosis               String?
+  doctorNotes             String?
+  advice                  String?
+  signedAt                DateTime?
+  createdAt               DateTime             @default(now())
+  patient                 Patient              @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId               String
+  doctor                  User?                @relation("DoctorVisits", fields: [doctorId], references: [id], onDelete: SetNull)
+  doctorId                String?
+  prescriptions           Prescription[]
+  testsOrdered            TestOrder[]
+  imagingOrders           ImagingOrder[]
+  invoice                 Invoice?
+  appointment             Appointment?         @relation("AppointmentVisit", fields: [appointmentId], references: [id])
+  appointmentId           String?              @unique
+  reasonForVisit          String?
   historyOfPresentIllness String?
-  pastMedicalHistory String?
-  surgicalHistory String?
-  familyHistory String?
-  socialHistory String?
-  reviewOfSystems String?
-  examination String?
-  assessment String?
-  treatmentPlan String?
-  followUpDate DateTime?
-  referralNotes String?
-  privateNote String?
-  version Int @default(1)
-  vitals VitalSign[]
-  diagnoses DiagnosisEntry[]
-  amendments EncounterAmendment[]
-  diagnosticOrders DiagnosticOrder[]
-  documents StoredDocument[]
+  pastMedicalHistory      String?
+  surgicalHistory         String?
+  familyHistory           String?
+  socialHistory           String?
+  reviewOfSystems         String?
+  examination             String?
+  assessment              String?
+  treatmentPlan           String?
+  followUpDate            DateTime?
+  referralNotes           String?
+  privateNote             String?
+  version                 Int                  @default(1)
+  vitals                  VitalSign[]
+  diagnoses               DiagnosisEntry[]
+  amendments              EncounterAmendment[]
+  diagnosticOrders        DiagnosticOrder[]
+  documents               StoredDocument[]
+  pharmacyOrder           PharmacyOrder?
 }
 
 model VitalSign {
-  id String @id @default(cuid())
-  visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  visitId String
-  heightCm Float?
-  weightKg Float?
-  bmi Float?
-  temperatureC Float?
-  pulseBpm Int?
-  respiratoryRate Int?
-  systolicBp Int?
-  diastolicBp Int?
+  id               String    @id @default(cuid())
+  visit            Visit     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId          String
+  heightCm         Float?
+  weightKg         Float?
+  bmi              Float?
+  temperatureC     Float?
+  pulseBpm         Int?
+  respiratoryRate  Int?
+  systolicBp       Int?
+  diastolicBp      Int?
   oxygenSaturation Float?
-  measuredAt DateTime @default(now())
-  bmiCalculatedAt DateTime?
-  recordedById String
+  measuredAt       DateTime  @default(now())
+  bmiCalculatedAt  DateTime?
+  recordedById     String
 
   @@index([visitId, measuredAt])
 }
 
 model DiagnosisEntry {
-  id String @id @default(cuid())
-  visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  visitId String
-  code String?
-  codingSystem String?
-  description String
-  isPrimary Boolean @default(false)
+  id             String   @id @default(cuid())
+  visit          Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId        String
+  code           String?
+  codingSystem   String?
+  description    String
+  isPrimary      Boolean  @default(false)
   clinicalStatus String?
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   @@index([visitId])
 }
 
 model EncounterAmendment {
-  id String @id @default(cuid())
-  visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  visitId String
-  authorId String
-  reason String
+  id              String   @id @default(cuid())
+  visit           Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId         String
+  authorId        String
+  reason          String
   originalContent Json
-  amendedContent Json
-  createdAt DateTime @default(now())
+  amendedContent  Json
+  createdAt       DateTime @default(now())
 
   @@index([visitId, createdAt])
 }
 
 model Appointment {
-  id             String            @id @default(cuid())
-  scheduledAt    DateTime
-  durationMinutes Int               @default(30)
-  reason         String?
-  status         AppointmentStatus @default(SCHEDULED)
-  createdAt      DateTime          @default(now())
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId String
-  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  patientId      String
-  doctor         User?             @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: SetNull)
-  doctorId       String?
-  visit          Visit?            @relation("AppointmentVisit")
-  statusHistory  AppointmentStatusHistory[]
-  clinicId String?
-  clinic ClinicLocation? @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  id                String                     @id @default(cuid())
+  scheduledAt       DateTime
+  durationMinutes   Int                        @default(30)
+  reason            String?
+  status            AppointmentStatus          @default(SCHEDULED)
+  createdAt         DateTime                   @default(now())
+  organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId    String
+  patient           Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId         String
+  doctor            User?                      @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: SetNull)
+  doctorId          String?
+  visit             Visit?                     @relation("AppointmentVisit")
+  statusHistory     AppointmentStatusHistory[]
+  clinicId          String?
+  clinic            ClinicLocation?            @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   appointmentTypeId String?
-  appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  appointmentType   AppointmentType?           @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, scheduledAt])
   @@index([doctorId, scheduledAt])
 }
 
 model AppointmentStatusHistory {
-  id            String   @id @default(cuid())
-  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  appointmentId String
+  id             String             @id @default(cuid())
+  appointment    Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  appointmentId  String
   previousStatus AppointmentStatus?
-  newStatus     AppointmentStatus
-  reason        String?
-  changedById   String?
-  createdAt     DateTime @default(now())
+  newStatus      AppointmentStatus
+  reason         String?
+  changedById    String?
+  createdAt      DateTime           @default(now())
 
   @@index([appointmentId, createdAt])
 }
@@ -533,63 +801,69 @@ model AuditEvent {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId, expiresAt])
 }
 
 model AppointmentRequest {
-  id              String                   @id @default(cuid())
-  patientName     String
-  patientEmail    String
-  patientPhone    String
-  reason          String?
-  requestedAt     DateTime
-  durationMinutes Int                      @default(30)
-  status          AppointmentRequestStatus @default(PENDING)
-  createdAt       DateTime                 @default(now())
-  respondedAt     DateTime?
-  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId  String
-  doctor          User                     @relation("DoctorAppointmentRequests", fields: [doctorId], references: [id], onDelete: Cascade)
-  doctorId        String
-  bookingReference String?                  @unique
-  idempotencyKey   String?                  @unique
+  id                String                   @id @default(cuid())
+  patientName       String
+  patientEmail      String
+  patientPhone      String
+  reason            String?
+  requestedAt       DateTime
+  durationMinutes   Int                      @default(30)
+  status            AppointmentRequestStatus @default(PENDING)
+  createdAt         DateTime                 @default(now())
+  respondedAt       DateTime?
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId    String
+  doctor            User                     @relation("DoctorAppointmentRequests", fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId          String
+  bookingReference  String?                  @unique
+  idempotencyKey    String?                  @unique
   privacyAcceptedAt DateTime?
-  clinicId String?
-  clinic ClinicLocation? @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  clinicId          String?
+  clinic            ClinicLocation?          @relation(fields: [clinicId], references: [id], onDelete: SetNull)
   appointmentTypeId String?
-  appointmentType AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  appointmentType   AppointmentType?         @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
 
   @@index([doctorId, requestedAt])
   @@index([organizationId, requestedAt])
 }
 
 model Prescription {
-  id        String  @id @default(cuid())
-  medicine  String
-  dosage    String?
-  frequency String?
-  duration  String?
-  visit     Visit   @relation(fields: [visitId], references: [id], onDelete: Cascade)
-  visitId   String
-  genericName String?
-  strength String?
-  dose String?
-  dosageUnit String?
-  route String?
-  quantity Int?
-  foodInstruction String?
-  startDate DateTime?
-  directions String?
-  allergyWarningAcknowledged Boolean @default(false)
-  finalizedAt DateTime?
-  reference String? @unique
+  id                         String                    @id @default(cuid())
+  medicine                   String
+  dosage                     String?
+  frequency                  String?
+  duration                   String?
+  visit                      Visit                     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId                    String
+  genericName                String?
+  strength                   String?
+  dose                       String?
+  dosageUnit                 String?
+  route                      String?
+  quantity                   Int?
+  foodInstruction            String?
+  startDate                  DateTime?
+  directions                 String?
+  allergyWarningAcknowledged Boolean                   @default(false)
+  finalizedAt                DateTime?
+  reference                  String?                   @unique
+  medicationCode             String?
+  codingSystem               String?
+  status                     MedicationStatementStatus @default(ACTIVE)
+  version                    Int                       @default(1)
+  warnings                   Json?
+  interactionOverrideReason  String?
 }
 
 model TestOrder {
@@ -597,6 +871,71 @@ model TestOrder {
   name    String
   visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
   visitId String
+}
+
+enum PharmacyOrderStatus {
+  PENDING
+  DISPENSED
+}
+
+model PharmacyOrder {
+  id             String              @id
+  status         PharmacyOrderStatus @default(PENDING)
+  createdAt      DateTime            @default(now())
+  dispensedAt    DateTime?
+  visitId        String              @unique
+  visit          Visit               @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items          PharmacyOrderItem[]
+  invoice        PharmacyInvoice?
+
+  @@index([organizationId, status])
+}
+
+model PharmacyOrderItem {
+  id              String        @id
+  medicine        String
+  dosage          String?
+  frequency       String?
+  duration        String?
+  pharmacyOrderId String
+  pharmacyOrder   PharmacyOrder @relation(fields: [pharmacyOrderId], references: [id], onDelete: Cascade)
+}
+
+model PharmacyInvoice {
+  id              String                @id
+  invoiceNo       Int
+  createdAt       DateTime              @default(now())
+  pharmacyOrderId String                @unique
+  pharmacyOrder   PharmacyOrder         @relation(fields: [pharmacyOrderId], references: [id], onDelete: Cascade)
+  patientId       String
+  patient         Patient               @relation(fields: [patientId], references: [id])
+  organizationId  String
+  organization    Organization          @relation(fields: [organizationId], references: [id])
+  subtotal        Int                   @default(0)
+  taxTotal        Int                   @default(0)
+  grandTotal      Int                   @default(0)
+  createdById     String?
+  createdBy       User?                 @relation(fields: [createdById], references: [id])
+  items           PharmacyInvoiceItem[]
+
+  @@unique([organizationId, invoiceNo])
+}
+
+model PharmacyInvoiceItem {
+  id             String          @id
+  invoiceId      String
+  invoice        PharmacyInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description    String
+  quantity       Int             @default(1)
+  unitPrice      Int             @default(0)
+  taxRatePercent Int             @default(0)
+  amount         Int             @default(0)
+  taxAmount      Int             @default(0)
+  total          Int             @default(0)
 }
 
 model Invite {
@@ -697,33 +1036,33 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id             String       @id @default(cuid())
-  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId      String
-  category       ItemCategory
-  description    String
-  quantity       Int          @default(1)
-  unitPrice      Int          @default(0)
-  taxRatePercent Int          @default(0)
-  amount         Int          @default(0)
-  taxAmount      Int          @default(0)
-  total          Int          @default(0)
-  discountAmount Int          @default(0)
+  id                     String       @id @default(cuid())
+  invoice                Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId              String
+  category               ItemCategory
+  description            String
+  quantity               Int          @default(1)
+  unitPrice              Int          @default(0)
+  taxRatePercent         Int          @default(0)
+  amount                 Int          @default(0)
+  taxAmount              Int          @default(0)
+  total                  Int          @default(0)
+  discountAmount         Int          @default(0)
   discountAuthorizedById String?
 }
 
 model Payment {
-  id           String        @id @default(cuid())
-  invoice      Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId    String
-  amount       Int
-  method       PaymentMethod
-  reference    String?
-  paidAt       DateTime      @default(now())
-  recordedBy   User?         @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
-  recordedById String?
-  receiptNumber String? @unique
-  refunds Refund[]
+  id            String        @id @default(cuid())
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId     String
+  amount        Int
+  method        PaymentMethod
+  reference     String?
+  paidAt        DateTime      @default(now())
+  recordedBy    User?         @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  recordedById  String?
+  receiptNumber String?       @unique
+  refunds       Refund[]
 }
 
 enum DiagnosticOrderType {
@@ -747,34 +1086,35 @@ enum DiagnosticOrderStatus {
 }
 
 model DiagnosticOrder {
-  id String @id @default(cuid())
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String?
-  clinic ClinicLocation? @relation(fields: [clinicId], references: [id], onDelete: SetNull)
-  patientId String
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visitId String
-  visit Visit @relation(fields: [visitId], references: [id], onDelete: Restrict)
+  id                     String                         @id @default(cuid())
+  organizationId         String
+  organization           Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId               String?
+  clinic                 ClinicLocation?                @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  patientId              String
+  patient                Patient                        @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visitId                String
+  visit                  Visit                          @relation(fields: [visitId], references: [id], onDelete: Restrict)
   orderingPractitionerId String
-  orderingPractitioner User @relation("DiagnosticOrderPractitioner", fields: [orderingPractitionerId], references: [id], onDelete: Restrict)
-  orderNumber String
-  accessionNumber String?
-  type DiagnosticOrderType
-  procedureCode String?
-  procedureName String
-  clinicalIndication String?
-  priority DiagnosticPriority @default(ROUTINE)
-  scheduledAt DateTime?
-  status DiagnosticOrderStatus @default(CREATED)
-  resultSummary String?
-  externalSystemId String?
-  reviewedAt DateTime?
-  reviewedById String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  statusHistory DiagnosticOrderStatusHistory[]
-  documents StoredDocument[]
+  orderingPractitioner   User                           @relation("DiagnosticOrderPractitioner", fields: [orderingPractitionerId], references: [id], onDelete: Restrict)
+  orderNumber            String
+  accessionNumber        String?
+  type                   DiagnosticOrderType
+  procedureCode          String?
+  procedureName          String
+  clinicalIndication     String?
+  priority               DiagnosticPriority             @default(ROUTINE)
+  scheduledAt            DateTime?
+  status                 DiagnosticOrderStatus          @default(CREATED)
+  resultSummary          String?
+  externalSystemId       String?
+  reviewedAt             DateTime?
+  reviewedById           String?
+  createdAt              DateTime                       @default(now())
+  updatedAt              DateTime                       @updatedAt
+  statusHistory          DiagnosticOrderStatusHistory[]
+  documents              StoredDocument[]
+  observations           DiagnosticObservation[]
 
   @@unique([organizationId, orderNumber])
   @@unique([organizationId, accessionNumber])
@@ -782,99 +1122,136 @@ model DiagnosticOrder {
   @@index([organizationId, patientId, createdAt])
 }
 
+model DiagnosticObservation {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderId        String
+  order          DiagnosticOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient                   @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  code           String?
+  codingSystem   String?
+  display        String
+  valueNumber    Float?
+  valueText      String?
+  valueBoolean   Boolean?
+  unit           String?
+  unitCode       String?
+  referenceLow   Float?
+  referenceHigh  Float?
+  referenceText  String?
+  interpretation ObservationInterpretation @default(INDETERMINATE)
+  status         ObservationStatus         @default(FINAL)
+  isCritical     Boolean                   @default(false)
+  observedAt     DateTime                  @default(now())
+  specimenType   String?
+  method         String?
+  verifiedAt     DateTime?
+  verifiedById   String?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([organizationId, patientId, observedAt])
+  @@index([orderId, status])
+  @@index([organizationId, isCritical, reviewedAt])
+}
+
 model DiagnosticOrderStatusHistory {
-  id String @id @default(cuid())
-  orderId String
-  order DiagnosticOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id             String                 @id @default(cuid())
+  orderId        String
+  order          DiagnosticOrder        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   previousStatus DiagnosticOrderStatus?
-  newStatus DiagnosticOrderStatus
-  reason String?
-  changedById String
-  createdAt DateTime @default(now())
+  newStatus      DiagnosticOrderStatus
+  reason         String?
+  changedById    String
+  createdAt      DateTime               @default(now())
 
   @@index([orderId, createdAt])
 }
 
 model ServiceCatalogItem {
-  id String @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  code String
-  name String
-  category ItemCategory
-  taxable Boolean @default(false)
-  active Boolean @default(true)
-  prices ClinicPrice[]
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  category       ItemCategory
+  taxable        Boolean       @default(false)
+  active         Boolean       @default(true)
+  prices         ClinicPrice[]
 
   @@unique([organizationId, code])
   @@index([organizationId, active])
 }
 
 model ClinicPrice {
-  id String @id @default(cuid())
+  id             String             @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  serviceId String
-  service ServiceCatalogItem @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  unitPrice Int
-  active Boolean @default(true)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         ClinicLocation     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  serviceId      String
+  service        ServiceCatalogItem @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  unitPrice      Int
+  active         Boolean            @default(true)
 
   @@unique([clinicId, serviceId])
   @@index([organizationId, active])
 }
 
 model TaxConfiguration {
-  id String @id @default(cuid())
+  id             String         @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  clinicId String
-  clinic ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  name String
-  ratePercent Float
-  active Boolean @default(true)
-  effectiveFrom DateTime?
-  effectiveTo DateTime?
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         ClinicLocation @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  name           String
+  ratePercent    Float
+  active         Boolean        @default(true)
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
 
   @@index([organizationId, clinicId, active])
 }
 
 model Refund {
-  id String @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  invoiceId String
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  paymentId String?
-  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  amount Int
-  reason String
-  reference String?
-  createdById String
-  createdAt DateTime @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  invoiceId      String
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  paymentId      String?
+  payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  amount         Int
+  reason         String
+  reference      String?
+  createdById    String
+  createdAt      DateTime     @default(now())
 
   @@index([organizationId, invoiceId, createdAt])
 }
 
 model StoredDocument {
-  id String @id @default(cuid())
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  patientId String
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  visitId String?
-  visit Visit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  id                String           @id @default(cuid())
+  organizationId    String
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  patientId         String
+  patient           Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  visitId           String?
+  visit             Visit?           @relation(fields: [visitId], references: [id], onDelete: SetNull)
   diagnosticOrderId String?
-  diagnosticOrder DiagnosticOrder? @relation(fields: [diagnosticOrderId], references: [id], onDelete: SetNull)
-  originalName String
-  contentType String
-  sizeBytes Int
-  storageKey String @unique
-  checksumSha256 String
-  uploadedById String
-  createdAt DateTime @default(now())
-  deletedAt DateTime?
+  diagnosticOrder   DiagnosticOrder? @relation(fields: [diagnosticOrderId], references: [id], onDelete: SetNull)
+  originalName      String
+  contentType       String
+  sizeBytes         Int
+  storageKey        String           @unique
+  checksumSha256    String
+  uploadedById      String
+  createdAt         DateTime         @default(now())
+  deletedAt         DateTime?
 
   @@index([organizationId, patientId, createdAt])
   @@index([organizationId, diagnosticOrderId])

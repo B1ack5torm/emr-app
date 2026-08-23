@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
 
-type Rx = { medicine: string; dosage: string; frequency: string; duration: string };
+type SafetyWarning = { index: number; code: "ALLERGY" | "DUPLICATE_THERAPY" | "INTERACTION"; severity: string; message: string };
+type Rx = { medicine: string; dosage: string; frequency: string; duration: string; allergyWarningAcknowledged?: boolean; interactionOverrideReason?: string; safetyWarnings?: SafetyWarning[] };
 
 export default function ConsultPage({ params }: { params: { visitId: string } }) {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   if (!visit) return <div className="text-inkSoft">Loading chart…</div>;
 
   const addRx = () => setRx([...rx, { medicine: "", dosage: "", frequency: "", duration: "" }]);
-  const updateRx = (i: number, field: keyof Rx, val: string) => setRx(rx.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)));
+  const updateRx = (i: number, field: keyof Rx, val: any) => setRx(rx.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)));
   const removeRx = (i: number) => setRx(rx.filter((_, idx) => idx !== i));
   const addTest = () => { if (testDraft.trim()) { setTests([...tests, testDraft.trim()]); setTestDraft(""); } };
 
@@ -62,7 +63,11 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       setTests((saved.testsOrdered || []).map((test: any) => test.name));
       setTestDraft("");
       setError("");
-    } else setError("Could not save the visit. Please try again.");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      if (data.code === "MEDICATION_SAFETY_WARNING" && Array.isArray(data.warnings)) setRx((current) => current.map((item, index) => ({ ...item, safetyWarnings: data.warnings.filter((warning: SafetyWarning) => warning.index === index) })));
+      setError(data.error || "Could not save the visit. Please try again.");
+    }
   };
 
   const completed = visit.status === "COMPLETED";
@@ -119,12 +124,15 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           <div className="flex items-center gap-2 text-xs font-bold text-inkSoft uppercase mb-2"><Pill size={14} /> Prescription</div>
           <div className="flex flex-col gap-2">
             {rx.map((r, i) => (
-              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-2 items-center">
+              <div key={i} className="rounded-lg border border-transparent has-[.safety-warning]:border-alert has-[.safety-warning]:bg-alertSoft p-1">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-2 items-center">
                 <input placeholder="Medicine name" value={r.medicine} onChange={(e) => updateRx(i, "medicine", e.target.value)} className="input" />
                 <input placeholder="Dosage" value={r.dosage} onChange={(e) => updateRx(i, "dosage", e.target.value)} className="input" />
                 <input placeholder="Frequency" value={r.frequency} onChange={(e) => updateRx(i, "frequency", e.target.value)} className="input" />
                 <input placeholder="Duration" value={r.duration} onChange={(e) => updateRx(i, "duration", e.target.value)} className="input" />
                 <X size={16} className="cursor-pointer text-inkSoft" onClick={() => removeRx(i)} />
+              </div>
+              {r.safetyWarnings?.map((warning, warningIndex) => <div key={warningIndex} className="safety-warning mt-2 rounded-lg bg-white p-2 text-xs text-alert"><div className="font-bold">{warning.severity} · {warning.code.replaceAll("_", " ")}</div><div>{warning.message}</div>{warning.code === "ALLERGY" ? <label className="mt-2 flex items-center gap-2 font-semibold"><input type="checkbox" checked={!!r.allergyWarningAcknowledged} onChange={(e) => updateRx(i, "allergyWarningAcknowledged", e.target.checked)} /> I reviewed and acknowledge this allergy warning</label> : <textarea value={r.interactionOverrideReason || ""} onChange={(e) => updateRx(i, "interactionOverrideReason", e.target.value)} placeholder="Clinical justification to override (minimum 10 characters)" className="mt-2 min-h-14 w-full rounded-md border border-alert px-2 py-1.5 text-xs text-ink" />}</div>)}
               </div>
             ))}
           </div>

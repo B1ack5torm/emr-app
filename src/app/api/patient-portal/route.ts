@@ -14,7 +14,11 @@ export async function GET() {
       id: true, mrn: true, name: true, age: true, dateOfBirth: true, gender: true, phone: true, email: true,
       address: true, bloodGroup: true, emergencyContact: true, createdAt: true,
       organization: { select: { name: true } },
-      allergies: { select: { id: true, name: true } },
+      allergies: { where: { clinicalStatus: "ACTIVE" }, select: { id: true, name: true, reaction: true, severity: true } },
+      problems: { where: { clinicalStatus: "ACTIVE" }, orderBy: { createdAt: "desc" }, select: { id: true, description: true, onsetDate: true } },
+      medicationStatements: { where: { status: "ACTIVE" }, orderBy: { createdAt: "desc" }, select: { id: true, medication: true, dose: true, dosageUnit: true, frequency: true, route: true } },
+      immunizations: { where: { status: "COMPLETED" }, orderBy: { occurrenceDate: "desc" }, select: { id: true, vaccine: true, occurrenceDate: true } },
+      diagnosticObservations: { where: { reviewedAt: { not: null }, status: { in: ["FINAL", "AMENDED", "CORRECTED"] } }, orderBy: { observedAt: "desc" }, take: 50, select: { id: true, display: true, valueNumber: true, valueText: true, valueBoolean: true, unit: true, referenceLow: true, referenceHigh: true, referenceText: true, interpretation: true, isCritical: true, observedAt: true, order: { select: { procedureName: true } } } },
       appointments: { orderBy: { scheduledAt: "desc" }, select: { id: true, scheduledAt: true, durationMinutes: true, reason: true, status: true, doctor: { select: { name: true } } } },
       visits: {
         where: { status: "COMPLETED" }, orderBy: { createdAt: "desc" },

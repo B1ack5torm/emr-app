@@ -19,6 +19,11 @@ Next.js (App Router) + PostgreSQL (via Prisma) + NextAuth modular monolith for o
 - Service catalog, clinic prices, tax configuration, payment receipt numbers, and separately recorded refunds.
 - Protected PDF/JPEG/PNG document storage with random keys, tenant-checked downloads, size limits, checksums, AES-256-GCM encryption, and a fail-closed production malware-scanner adapter.
 - A normalized Postgres schema via Prisma (`prisma/schema.prisma`).
+- Master patient identity controls with normalized contact matching, additional identifiers, duplicate review, and an administrator-only audited merge workflow.
+- A longitudinal clinical summary covering problems, active medications, enriched allergies, immunizations, procedures, safety flags, and reviewed diagnostic observations.
+- Structured laboratory result entry with typed values, reference ranges, automatic abnormal/critical interpretation, and clinical acknowledgement.
+- Prescribing checks for allergy matches, duplicate therapy, and a focused high-risk interaction list with documented overrides.
+- Tenant-scoped FHIR R4-style patient bundle export and an expanded patient portal clinical summary.
 
 ## 1. Install dependencies
 

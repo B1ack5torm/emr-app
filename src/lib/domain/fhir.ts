@@ -1,0 +1,4 @@
+export function fhirReference(resourceType: string, id: string) { return { reference: `${resourceType}/${id}` }; }
+export function fhirIdentifier(identifier: { system: string; value: string; use?: string; type?: string }) { return { use: String(identifier.use || "usual").toLowerCase(), system: identifier.system, value: identifier.value, type: identifier.type ? { text: identifier.type } : undefined }; }
+export function fhirCode(code: string | null | undefined, system: string | null | undefined, display: string) { return { coding: code ? [{ system: system || undefined, code, display }] : undefined, text: display }; }
+export function fhirBundle(entries: Array<{ resourceType: string; id: string; [key: string]: unknown }>) { return { resourceType: "Bundle", type: "collection", timestamp: new Date().toISOString(), total: entries.length, entry: entries.map((resource) => ({ fullUrl: `urn:uuid:${resource.resourceType}-${resource.id}`, resource })) }; }

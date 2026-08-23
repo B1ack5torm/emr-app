@@ -9,6 +9,7 @@ type Patient = {
   allergies: { id: string; name: string }[];
 };
 type Doctor = { id: string; name: string };
+type DuplicateMatch = { id: string; mrn: string; name: string; dateOfBirth?: string; phone?: string; email?: string; score: number; reasons: string[] };
 
 export default function FrontDeskPage() {
   const [mode, setMode] = useState<"search" | "new" | "visit">("search");
@@ -85,6 +86,8 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
   const [form, setForm] = useState({ name: "", age: "", gender: "", doctorId: "", phone: "", email: "", dateOfBirth: "", address: "", bloodGroup: "", emergencyContact: "" });
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [error, setError] = useState("");
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -97,15 +100,25 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
     }).catch(() => setError("Could not load the doctor list."));
   }, []);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (e?: React.FormEvent, overrideDuplicate = false) => {
+    e?.preventDefault();
+    setError(""); setSubmitting(true);
     const finalAllergies = draft.trim() ? [...allergies, draft.trim()] : allergies;
     const res = await fetch("/api/patients", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, age: Number(form.age), allergies: finalAllergies }),
+      body: JSON.stringify({ ...form, age: Number(form.age), allergies: finalAllergies, overrideDuplicate }),
     });
-    if (res.ok) onCreated(await res.json(), form.doctorId);
-    else setError((await res.json()).error || "Could not register the patient.");
+    const data = await res.json(); setSubmitting(false);
+    if (res.ok) { setDuplicates([]); onCreated(data, form.doctorId); }
+    else if (res.status === 409 && data.code === "POSSIBLE_DUPLICATE") { setDuplicates(data.matches || []); setError(data.error); }
+    else setError(data.error || "Could not register the patient.");
+  };
+
+  const selectExisting = async (id: string) => {
+    setSubmitting(true); setError("");
+    const response = await fetch(`/api/patients/${id}`); const data = await response.json(); setSubmitting(false);
+    if (!response.ok) return setError(data.error || "Could not open the existing record.");
+    onCreated(data, form.doctorId);
   };
 
   return (
@@ -116,6 +129,14 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
       </div>
       <div className="grid grid-cols-2 gap-4">
         {error && <div className="col-span-2 text-alert text-sm">{error}</div>}
+        {duplicates.length > 0 && <div className="col-span-2 rounded-xl border border-waiting bg-waitingSoft p-4">
+          <div className="flex items-center gap-2 font-bold text-waiting"><AlertTriangle size={16} /> Review possible duplicate records</div>
+          <div className="mt-2 space-y-2">{duplicates.map((match) => <div key={match.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white p-3 text-sm">
+            <div><div className="font-bold">{match.name} <span className="font-mono text-xs text-inkSoft">{match.mrn}</span></div><div className="text-xs text-inkSoft">{match.phone || "No phone"} · {match.dateOfBirth ? new Date(match.dateOfBirth).toLocaleDateString() : "No DOB"} · Match: {match.reasons.join(", ")}</div></div>
+            <button type="button" disabled={submitting} onClick={() => selectExisting(match.id)} className="shrink-0 rounded-lg bg-accent px-3 py-2 text-xs font-bold text-white">Use this record</button>
+          </div>)}</div>
+          <div className="mt-3 flex justify-end"><button type="button" disabled={submitting} onClick={() => submit(undefined, true)} className="rounded-lg border border-alert px-3 py-2 text-xs font-bold text-alert">Confirmed different person — create anyway</button></div>
+        </div>}
         <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
         <F label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(e) => setDob(e.target.value)} className="input" /></F>
         <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
@@ -145,7 +166,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
         </div>
       </div>
       <div className="flex justify-end mt-5">
-        <button className="bg-accent text-white rounded-lg px-4 py-2.5 font-semibold text-sm">Save patient &amp; continue to visit</button>
+        <button disabled={submitting} className="bg-accent disabled:opacity-60 text-white rounded-lg px-4 py-2.5 font-semibold text-sm">{submitting ? "Checking…" : "Save patient & continue to visit"}</button>
       </div>
       <style jsx>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; }`}</style>
     </form>

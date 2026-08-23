@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Search, User, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, Clock, Pencil, Save, X } from "lucide-react";
+import { Search, User, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, Clock, Pencil, Save, X, Plus, ShieldAlert, Syringe, Pill, Stethoscope } from "lucide-react";
 import { AllergyBanner } from "@/components/shared";
 
 export default function RecordsPage() {
@@ -12,7 +12,10 @@ export default function RecordsPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
   const [editing, setEditing] = useState<string | null>(null);
-  const canEdit = ["RECEPTION", "ADMIN", "SUPER_ADMIN"].includes((session?.user as any)?.role || "");
+  const role = (session?.user as any)?.role || "";
+  const canEdit = ["RECEPTION", "FRONT_DESK", "NURSE", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role);
+  const canEditClinical = ["DOCTOR", "NURSE", "RECEPTION", "FRONT_DESK", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role);
+  const canMerge = ["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -24,7 +27,7 @@ export default function RecordsPage() {
   const toggle = async (id: string) => {
     if (expanded === id) { setExpanded(null); setEditing(null); return; }
     setExpanded(id);
-    const res = await fetch(`/api/patients/${id}`);
+    const res = await fetch(`/api/patients/${id}/clinical-summary`);
     setDetail(await res.json());
   };
 
@@ -57,7 +60,7 @@ export default function RecordsPage() {
               </div>
               {isOpen && detail?.id === p.id && (
                 <div className="px-4 pb-4">
-                  {canEdit && <div className="mb-3 flex justify-end"><button onClick={() => setEditing(editing === p.id ? null : p.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">{editing === p.id ? <><X size={13} /> Cancel editing</> : <><Pencil size={13} /> Edit patient</>}</button></div>}
+                  <div className="mb-3 flex justify-end gap-2"><a href={`/api/fhir/patients/${p.id}`} className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">Export FHIR</a>{canEdit && <button onClick={() => setEditing(editing === p.id ? null : p.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">{editing === p.id ? <><X size={13} /> Cancel editing</> : <><Pencil size={13} /> Edit patient</>}</button>}</div>
                   {editing === p.id ? <PatientEditForm patient={detail} onCancel={() => setEditing(null)} onSaved={(updated) => { setDetail((current: any) => ({ ...current, ...updated })); setPatients((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item)); setEditing(null); }} /> : <>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div><b>Phone:</b> {detail.phone || "—"}</div>
@@ -67,6 +70,8 @@ export default function RecordsPage() {
                     <div><b>Emergency contact:</b> {detail.emergencyContact || "—"}</div>
                   </div>
                   <AllergyBanner allergies={detail.allergies.map((a: any) => a.name)} />
+                  <ClinicalSummary patient={detail} canEdit={canEditClinical} onChanged={async () => { const response = await fetch(`/api/patients/${p.id}/clinical-summary`); if (response.ok) setDetail(await response.json()); }} />
+                  {canMerge && <DuplicateMergePanel target={detail} onMerged={async () => { const response = await fetch(`/api/patients/${p.id}/clinical-summary`); if (response.ok) setDetail(await response.json()); }} />}
                   <div className="text-xs font-bold text-inkSoft uppercase mt-3.5">Visit history</div>
                   <div className="flex flex-col gap-2 mt-2">
                     {detail.visits.length === 0 && <div className="text-sm text-inkSoft">No visits recorded yet.</div>}
@@ -81,6 +86,55 @@ export default function RecordsPage() {
       </div>
     </div>
   );
+}
+
+const summaryConfig: Record<string, { title: string; collection: string; field: string; placeholder: string; date?: string; icon: any }> = {
+  ALLERGY: { title: "Allergies", collection: "allergies", field: "name", placeholder: "e.g. Penicillin", icon: ShieldAlert },
+  PROBLEM: { title: "Problem list", collection: "problems", field: "description", placeholder: "e.g. Type 2 diabetes", date: "onsetDate", icon: Stethoscope },
+  MEDICATION: { title: "Current medications", collection: "medicationStatements", field: "medication", placeholder: "e.g. Metformin 500 mg", date: "effectiveFrom", icon: Pill },
+  IMMUNIZATION: { title: "Immunizations", collection: "immunizations", field: "vaccine", placeholder: "e.g. Influenza vaccine", date: "occurrenceDate", icon: Syringe },
+  PROCEDURE: { title: "Procedures", collection: "procedures", field: "description", placeholder: "e.g. Appendectomy", date: "performedAt", icon: Stethoscope },
+  FLAG: { title: "Safety flags", collection: "clinicalFlags", field: "title", placeholder: "e.g. Fall risk", icon: AlertTriangle },
+};
+
+function ClinicalSummary({ patient, canEdit, onChanged }: { patient: any; canEdit: boolean; onChanged: () => Promise<void> }) {
+  const [adding, setAdding] = useState<string | null>(null); const [value, setValue] = useState(""); const [date, setDate] = useState(""); const [details, setDetails] = useState(""); const [severity, setSeverity] = useState("UNKNOWN"); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const submit = async (kind: string) => {
+    const config = summaryConfig[kind]; setBusy(true); setError("");
+    const body: any = { kind, [config.field]: value, notes: details, description: kind === "FLAG" ? details : undefined, severity };
+    if (config.date) body[config.date] = date;
+    const response = await fetch(`/api/patients/${patient.id}/clinical-summary`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await response.json(); setBusy(false);
+    if (!response.ok) return setError(data.error || "Could not save the clinical item.");
+    setAdding(null); setValue(""); setDate(""); setDetails(""); setSeverity("UNKNOWN"); await onChanged();
+  };
+  const changeStatus = async (kind: string, item: any) => {
+    const body = kind === "FLAG" ? { active: false } : kind === "MEDICATION" ? { status: "STOPPED" } : { clinicalStatus: "RESOLVED" };
+    const response = await fetch(`/api/patients/${patient.id}/clinical-summary/${kind.toLowerCase()}/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (response.ok) await onChanged();
+  };
+  const label = (kind: string, item: any) => item[summaryConfig[kind].field];
+  const isActive = (kind: string, item: any) => kind === "FLAG" ? item.active : kind === "MEDICATION" ? item.status === "ACTIVE" : ["ALLERGY", "PROBLEM"].includes(kind) ? item.clinicalStatus === "ACTIVE" : true;
+  const subtitle = (kind: string, item: any) => {
+    if (kind === "ALLERGY") return [item.reaction, item.severity !== "UNKNOWN" ? item.severity : null].filter(Boolean).join(" · ");
+    if (kind === "MEDICATION") return [item.dose, item.dosageUnit, item.frequency, item.route].filter(Boolean).join(" · ");
+    const dateField = summaryConfig[kind].date; return dateField && item[dateField] ? new Date(item[dateField]).toLocaleDateString() : item.description || item.notes || "";
+  };
+  return <div className="mt-4">
+    <div className="mb-2 text-xs font-bold uppercase text-inkSoft">Longitudinal clinical summary</div>
+    {error && <div className="mb-2 text-sm text-alert">{error}</div>}
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{Object.entries(summaryConfig).map(([kind, config]) => { const items = (patient[config.collection] || []) as any[]; const Icon = config.icon; return <section key={kind} className="rounded-xl border border-border bg-[#FAF8F2] p-3">
+      <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-sm font-bold"><Icon size={15} className="text-accentDark" />{config.title}</div>{canEdit && <button onClick={() => { setAdding(adding === kind ? null : kind); setError(""); }} className="rounded-md border border-border p-1 text-accentDark" aria-label={`Add ${config.title}`}><Plus size={13} /></button>}</div>
+      <div className="mt-2 space-y-1.5">{items.length === 0 && <div className="text-xs text-inkSoft">None recorded</div>}{items.slice(0, 6).map((item) => <div key={item.id} className={`rounded-lg border px-2.5 py-2 text-xs ${isActive(kind, item) ? "border-border bg-white" : "border-border bg-white opacity-55"}`}><div className="flex justify-between gap-2"><span className="font-semibold">{label(kind, item)}</span>{canEdit && isActive(kind, item) && ["ALLERGY", "PROBLEM", "MEDICATION", "FLAG"].includes(kind) && <button onClick={() => changeStatus(kind, item)} className="text-[10px] font-bold text-accentDark">{kind === "MEDICATION" ? "Stop" : kind === "FLAG" ? "Clear" : "Resolve"}</button>}</div>{subtitle(kind, item) && <div className="mt-0.5 text-inkSoft">{subtitle(kind, item)}</div>}</div>)}</div>
+      {adding === kind && <div className="mt-2 space-y-2 border-t border-dashed border-border pt-2"><input autoFocus value={value} onChange={(e) => setValue(e.target.value)} placeholder={config.placeholder} className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs" />{config.date && <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs" />}{["ALLERGY", "FLAG"].includes(kind) && <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs"><option value="UNKNOWN">Severity unknown</option><option value="MILD">Mild</option><option value="MODERATE">Moderate</option><option value="SEVERE">Severe</option><option value="LIFE_THREATENING">Life threatening</option></select>}<input value={details} onChange={(e) => setDetails(e.target.value)} placeholder={kind === "ALLERGY" ? "Reaction / notes" : "Optional details"} className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs" /><button disabled={busy || !value.trim() || (kind === "IMMUNIZATION" && !date)} onClick={() => submit(kind)} className="w-full rounded-md bg-accent py-1.5 text-xs font-bold text-white disabled:opacity-50">{busy ? "Saving…" : "Save"}</button></div>}
+    </section>; })}</div>
+  </div>;
+}
+
+function DuplicateMergePanel({ target, onMerged }: { target: any; onMerged: () => Promise<void> }) {
+  const [open, setOpen] = useState(false); const [query, setQuery] = useState(""); const [matches, setMatches] = useState<any[]>([]); const [source, setSource] = useState<any>(null); const [reason, setReason] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  useEffect(() => { if (!open || query.trim().length < 2) { setMatches([]); return; } const timer = setTimeout(() => fetch(`/api/patients?q=${encodeURIComponent(query)}`).then((r) => r.json()).then((rows) => setMatches(Array.isArray(rows) ? rows.filter((row) => row.id !== target.id) : [])), 250); return () => clearTimeout(timer); }, [open, query, target.id]);
+  const merge = async () => { if (!source) return; if (!window.confirm(`Merge ${source.name} (${source.mrn}) into ${target.name} (${target.mrn})? This cannot be automatically undone.`)) return; setBusy(true); setError(""); const response = await fetch("/api/patients/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourcePatientId: source.id, targetPatientId: target.id, confirmTargetMrn: target.mrn, reason }) }); const data = await response.json(); setBusy(false); if (!response.ok) return setError(data.error || "Could not merge records."); setOpen(false); setSource(null); setQuery(""); setReason(""); await onMerged(); };
+  return <div className="mt-4 rounded-xl border border-border bg-card p-3"><button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left text-xs font-bold uppercase text-inkSoft"><span>Identity and duplicate management</span><span>{open ? "Close" : "Review"}</span></button>{open && <div className="mt-3 space-y-2"><div className="text-xs text-inkSoft">The current record <b>{target.name} ({target.mrn})</b> will be kept as the master record.</div><input value={query} onChange={(e) => { setQuery(e.target.value); setSource(null); }} placeholder="Search duplicate by MRN, name, phone or identifier" className="w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2 text-sm" />{!source && matches.slice(0, 5).map((item) => <button key={item.id} onClick={() => { setSource(item); setQuery(`${item.name} (${item.mrn})`); setMatches([]); }} className="block w-full rounded-lg border border-border bg-white p-2 text-left text-xs"><b>{item.name}</b> · {item.mrn} · {item.phone || "no phone"}</button>)}{source && <><div className="rounded-lg border border-alert bg-alertSoft p-2 text-xs text-alert">Source record to retire: <b>{source.name} ({source.mrn})</b></div><textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Clinical/administrative reason for merge (minimum 10 characters)" className="min-h-16 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" /><button disabled={busy || reason.trim().length < 10} onClick={merge} className="rounded-lg bg-alert px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busy ? "Merging…" : "Merge duplicate into this record"}</button></>}{error && <div className="text-xs text-alert">{error}</div>}</div>}</div>;
 }
 
 function PatientEditForm({ patient, onCancel, onSaved }: { patient: any; onCancel: () => void; onSaved: (patient: any) => void }) {
