@@ -36,6 +36,7 @@ export default function LandingExperience() {
         <nav className="flex items-center gap-1.5 sm:gap-3">
           <a href="#features" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-[#41675C] hover:bg-white/70 sm:block">Features</a>
           <Link href="/patient-login" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-[#245847] hover:bg-white/70 md:block">Patient portal</Link>
+          <Link href="/book-appointment" className="inline-flex items-center gap-1.5 rounded-lg bg-[#24705D] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1C5B4A] sm:px-4"><CalendarDays size={15} />Book appointment</Link>
           <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-[#245847] hover:bg-white/70 sm:px-4">Sign in</Link>
         </nav>
       </header>
