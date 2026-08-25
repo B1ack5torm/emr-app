@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
   if (!currentPassword || !newPassword) {
     return NextResponse.json({ error: "Current and new password are required." }, { status: 400 });
   }
-  if (newPassword.length < 12 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
-    return NextResponse.json({ error: "New password must be at least 12 characters and contain a letter and number." }, { status: 400 });
+  if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    return NextResponse.json({ error: "New password must be at least 8 characters and contain a letter and number." }, { status: 400 });
   }
 
   const userId = access.user!.id;

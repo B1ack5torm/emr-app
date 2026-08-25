@@ -6,7 +6,7 @@ import { audit } from "@/lib/security";
 
 export async function POST(request: NextRequest) {
   const { token, password } = await request.json();
-  if (typeof token !== "string" || typeof password !== "string" || password.length < 12 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return NextResponse.json({ error: "Use a valid reset token and a password of at least 12 characters containing a letter and number." }, { status: 400 });
+  if (typeof token !== "string" || typeof password !== "string" || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return NextResponse.json({ error: "Use a valid reset token and a password of at least 8 characters containing a letter and number." }, { status: 400 });
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const reset = await prisma.passwordResetToken.findFirst({ where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } } });
   if (!reset) return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });

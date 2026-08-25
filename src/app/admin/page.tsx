@@ -155,7 +155,7 @@ export default function AdminPage() {
           <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Hospital / clinic name</label><input required value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
           <div className="min-w-[160px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator name</label><input required value={hospitalAdminName} onChange={(e) => setHospitalAdminName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
           <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator email</label><input type="email" name="new-hospital-administrator-email" autoComplete="off" data-1p-ignore data-lpignore="true" required value={hospitalAdminEmail} onChange={(e) => setHospitalAdminEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
-          <div className="min-w-[150px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Temporary password</label><input type="password" name="new-hospital-temporary-password" autoComplete="new-password" data-1p-ignore data-lpignore="true" required minLength={12} value={hospitalAdminPassword} onChange={(e) => setHospitalAdminPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <div className="min-w-[150px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Temporary password</label><input type="password" name="new-hospital-temporary-password" autoComplete="new-password" data-1p-ignore data-lpignore="true" required minLength={8} value={hospitalAdminPassword} onChange={(e) => setHospitalAdminPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
           <button disabled={creatingHospital} className="flex items-center gap-2 bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg"><ShieldCheck size={14} /> {creatingHospital ? "Creating…" : "Create hospital"}</button>
         </form>
         {hospitalError && <div className="text-alert text-sm mt-2">{hospitalError}</div>}
@@ -219,7 +219,7 @@ export default function AdminPage() {
             </div>
             <div className="min-w-[140px]">
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Password</label>
-              <input type="password" name="new-staff-temporary-password" autoComplete="new-password" data-1p-ignore data-lpignore="true" required minLength={12} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+              <input type="password" name="new-staff-temporary-password" autoComplete="new-password" data-1p-ignore data-lpignore="true" required minLength={8} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Role</label>

@@ -35,8 +35,8 @@ export async function POST(request: Request) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "Enter a valid administrator email address." }, { status: 400 });
   }
-  if (String(adminPassword).length < 12 || !/[A-Za-z]/.test(adminPassword) || !/\d/.test(adminPassword)) {
-    return NextResponse.json({ error: "Password must be at least 12 characters and contain a letter and number." }, { status: 400 });
+  if (String(adminPassword).length < 8 || !/[A-Za-z]/.test(adminPassword) || !/\d/.test(adminPassword)) {
+    return NextResponse.json({ error: "Password must be at least 8 characters and contain a letter and number." }, { status: 400 });
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });

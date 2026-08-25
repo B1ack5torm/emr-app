@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
   if (!assignableRoles.includes(role)) {
     return NextResponse.json({ error: "Invalid role." }, { status: 400 });
   }
-  if (password.length < 12 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    return NextResponse.json({ error: "Password must be at least 12 characters and contain a letter and number." }, { status: 400 });
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return NextResponse.json({ error: "Password must be at least 8 characters and contain a letter and number." }, { status: 400 });
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
