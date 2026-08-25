@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       sourceMergeRecords: { orderBy: { createdAt: "desc" }, select: { id: true, sourcePatientId: true, reason: true, createdAt: true } },
     },
   });
-  if (!patient || !patient.active || patient.mergedIntoId || (user.role !== "SUPER_ADMIN" && patient.organizationId !== user.organizationId)) return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+  if (!patient || !patient.active || patient.mergedIntoId || patient.organizationId !== user.organizationId) return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   await audit({ organizationId: patient.organizationId, userId: user.id, patientId: patient.id, action: "CLINICAL_SUMMARY_VIEWED", resourceType: "Patient", resourceId: patient.id, request: req });
   return NextResponse.json(patient);
 }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (access.response) return access.response;
   const user = access.user as any;
   const patient = await prisma.patient.findUnique({ where: { id: params.id }, select: { id: true, organizationId: true, active: true, mergedIntoId: true } });
-  if (!patient || !patient.active || patient.mergedIntoId || (user.role !== "SUPER_ADMIN" && patient.organizationId !== user.organizationId)) return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+  if (!patient || !patient.active || patient.mergedIntoId || patient.organizationId !== user.organizationId) return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
   const kind = String(body.kind || "").toUpperCase();
   let created: any;

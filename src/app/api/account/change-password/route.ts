@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { audit } from "@/lib/security";
+import { audit, requireCurrentUser } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireCurrentUser();
+  if (access.response) return access.response;
 
   const { currentPassword, newPassword } = await req.json();
   if (!currentPassword || !newPassword) {
@@ -17,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "New password must be at least 12 characters and contain a letter and number." }, { status: 400 });
   }
 
-  const userId = (session.user as any).id;
+  const userId = access.user!.id;
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
 

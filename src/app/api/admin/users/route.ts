@@ -15,7 +15,9 @@ export async function GET() {
   const session = { user: access.user } as any;
 
   const users = await prisma.user.findMany({
-    where: (session.user as any).role === "SUPER_ADMIN" ? {} : { organizationId: (session.user as any).organizationId },
+    where: (session.user as any).role === "SUPER_ADMIN"
+      ? { OR: [{ organizationId: (session.user as any).organizationId }, { id: (session.user as any).id }] }
+      : { organizationId: (session.user as any).organizationId },
     select: { id: true, name: true, email: true, role: true, status: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });

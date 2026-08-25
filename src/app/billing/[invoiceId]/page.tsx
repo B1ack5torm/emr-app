@@ -134,6 +134,10 @@ export default function InvoiceDetailPage({ params }: { params: { invoiceId: str
           </tbody>
         </table>
 
+        {items.some((item) => item.unitPrice === 0) && !locked && <div className="mt-3 rounded-lg border border-waitingSoft bg-waitingSoft/40 px-3 py-2 text-xs text-waiting">
+          No clinic price is configured for: <b>{items.filter((item) => item.unitPrice === 0).map((item) => item.description).join(", ")}</b>. Configure these services under Settings → Billing before collecting payment.
+        </div>}
+
         {!locked && <button onClick={addItem} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5 mt-3 print:hidden"><Plus size={14} /> Add line item</button>}
 
         <div className="flex justify-end mt-4">

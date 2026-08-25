@@ -73,13 +73,79 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.role = (user as any).role;
         token.id = (user as any).id;
-        token.organizationId = (user as any).organizationId;
-        token.organizationName = (user as any).organizationName;
-        token.mustChangePassword = (user as any).mustChangePassword;
+      }
+
+      // The database is the source of truth for hospital membership and role.
+      // Refreshing these claims prevents an old cookie from retaining access to a
+      // previous hospital after an administrator moves, suspends, or edits a user.
+      if (token.id) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: String(token.id) },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            status: true,
+            organizationId: true,
+            organization: { select: { id: true, name: true } },
+            mustChangePassword: true,
+          },
+        });
+
+        if (!currentUser || currentUser.status !== "ACTIVE") {
+          token.accountActive = false;
+          token.role = undefined;
+          token.organizationId = undefined;
+          token.organizationName = undefined;
+          return token;
+        }
+
+        const previousOrganizationId = token.organizationId ? String(token.organizationId) : null;
+        let activeOrganization = currentUser.organization;
+        let activeOrganizationId = currentUser.organizationId;
+
+        if (currentUser.role === "SUPER_ADMIN") {
+          const requestedOrganizationId = trigger === "update"
+            ? String((session as any)?.activeOrganizationId || "")
+            : String(token.organizationId || "");
+          if (requestedOrganizationId && requestedOrganizationId !== currentUser.organizationId) {
+            const requestedOrganization = await prisma.organization.findUnique({
+              where: { id: requestedOrganizationId },
+              select: { id: true, name: true },
+            });
+            if (requestedOrganization) {
+              activeOrganization = requestedOrganization;
+              activeOrganizationId = requestedOrganization.id;
+            }
+          }
+        }
+
+        token.accountActive = true;
+        token.name = currentUser.name;
+        token.email = currentUser.email;
+        token.role = currentUser.role;
+        token.homeOrganizationId = currentUser.organizationId;
+        token.organizationId = activeOrganizationId;
+        token.organizationName = activeOrganization.name;
+        token.mustChangePassword = currentUser.mustChangePassword;
+
+        if (trigger === "update" && currentUser.role === "SUPER_ADMIN" && previousOrganizationId !== activeOrganizationId) {
+          await prisma.auditEvent.create({
+            data: {
+              organizationId: activeOrganizationId,
+              userId: currentUser.id,
+              action: "ACTIVE_HOSPITAL_CHANGED",
+              resourceType: "Organization",
+              resourceId: activeOrganizationId,
+              previousValue: previousOrganizationId ? { organizationId: previousOrganizationId } : undefined,
+              newValue: { organizationId: activeOrganizationId },
+            },
+          });
+        }
       }
       return token;
     },
@@ -89,7 +155,9 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).organizationId = token.organizationId;
         (session.user as any).organizationName = token.organizationName;
+        (session.user as any).homeOrganizationId = token.homeOrganizationId;
         (session.user as any).mustChangePassword = token.mustChangePassword;
+        (session.user as any).accountActive = token.accountActive;
       }
       return session;
     },

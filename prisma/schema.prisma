@@ -266,7 +266,7 @@ model PractitionerSchedule {
   active             Boolean             @default(true)
   breaks             ScheduleBreak[]
 
-  @@unique([practitionerId, dayOfWeek, startMinute, endMinute])
+  @@unique([practitionerId, dayOfWeek])
   @@index([practitionerId, dayOfWeek, active])
 }
 

@@ -21,9 +21,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   });
   if (!appointmentRequest) return NextResponse.json({ error: "Appointment request not found." }, { status: 404 });
 
-  const canRespond = user.role === "SUPER_ADMIN" ||
-    (user.role === "DOCTOR" && appointmentRequest.doctorId === user.id) ||
-    (user.role !== "DOCTOR" && appointmentRequest.organizationId === user.organizationId);
+  const canRespond = appointmentRequest.organizationId === user.organizationId &&
+    (user.role !== "DOCTOR" || appointmentRequest.doctorId === user.id);
   if (!canRespond) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (appointmentRequest.status !== "PENDING") {
     return NextResponse.json({ error: "This appointment request has already been reviewed." }, { status: 409 });

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         tx.patient.findUnique({ where: { id: sourcePatientId }, include: { portalAccount: { select: { id: true } } } }),
         tx.patient.findUnique({ where: { id: targetPatientId }, include: { portalAccount: { select: { id: true } } } }),
       ]);
-      if (!source || !target || source.organizationId !== target.organizationId || (user.role !== "SUPER_ADMIN" && source.organizationId !== scopedOrganizationId)) throw new MergeError("Both patients must belong to your organization.", 404);
+      if (!source || !target || source.organizationId !== target.organizationId || source.organizationId !== scopedOrganizationId) throw new MergeError("Both patients must belong to your organization.", 404);
       if (!source.active || source.mergedIntoId || !target.active || target.mergedIntoId) throw new MergeError("A merged or inactive record cannot be merged again.", 409);
       if (source.portalAccount && target.portalAccount) throw new MergeError("Both records have portal accounts. Disable or reconcile one portal account before merging.", 409);
       if (body.confirmTargetMrn && body.confirmTargetMrn !== target.mrn) throw new MergeError("The target MRN confirmation does not match.", 409);

@@ -40,7 +40,8 @@ export async function POST(request: Request) {
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+  const creatorIsAdministrator = existing?.id === access.user.id && access.user.role === "SUPER_ADMIN";
+  if (existing && !creatorIsAdministrator) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
 
   const baseSlug = slugify(name);
   if (!baseSlug) return NextResponse.json({ error: "Enter a valid hospital name." }, { status: 400 });
@@ -49,24 +50,24 @@ export async function POST(request: Request) {
     slug = `${baseSlug}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  const passwordHash = await bcrypt.hash(adminPassword, 12);
+  const passwordHash = creatorIsAdministrator ? null : await bcrypt.hash(adminPassword, 12);
   const organization = await prisma.organization.create({
     data: {
       name,
       slug,
-      users: {
+      users: passwordHash ? {
         create: { name: administratorName, email, passwordHash, role: "ADMIN", status: "ACTIVE", mustChangePassword: true },
-      },
+      } : undefined,
     },
   });
 
   await audit({
-    organizationId: access.user.organizationId,
+    organizationId: organization.id,
     userId: access.user.id,
     action: "HOSPITAL_ACCOUNT_CREATED",
     resourceType: "Organization",
     resourceId: organization.id,
-    newValue: { hospitalName: organization.name, administratorEmail: email },
+    newValue: { hospitalName: organization.name, administratorEmail: email, superAdminAccess: true },
   });
 
   return NextResponse.json({ id: organization.id, name: organization.name }, { status: 201 });

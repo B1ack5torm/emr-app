@@ -9,13 +9,12 @@ export async function GET(req: NextRequest) {
   if (access.response) return access.response;
   const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
-  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
 
   const status = req.nextUrl.searchParams.get("status");
 
   const doctorId = (session.user as any).role === "DOCTOR" ? (session.user as any).id : undefined;
   const visits = await prisma.visit.findMany({
-    where: { patient: isSuperAdmin ? {} : { organizationId }, ...(doctorId ? { doctorId } : {}), ...(status ? { status: status as any } : {}) },
+    where: { patient: { organizationId }, ...(doctorId ? { doctorId } : {}), ...(status ? { status: status as any } : {}) },
     include: { patient: { include: { allergies: true } }, invoice: { select: { id: true } } },
     orderBy: { createdAt: "asc" },
   });

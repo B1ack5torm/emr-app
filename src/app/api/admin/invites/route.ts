@@ -1,34 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
 import crypto from "crypto";
+import { requirePermission } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("user:manage");
+  if (access.response) return access.response;
 
   const invites = await prisma.invite.findMany({
-    where: { organizationId: (session.user as any).organizationId, acceptedAt: null },
+    where: { organizationId: access.user!.organizationId, acceptedAt: null },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(invites);
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["ADMIN", "SUPER_ADMIN"].includes((session.user as any).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requirePermission("user:manage");
+  if (access.response) return access.response;
 
   const { email, role } = await req.json();
   if (!email || !role) return NextResponse.json({ error: "Email and role are required." }, { status: 400 });
   if (!["RECEPTION", "FRONT_DESK", "DOCTOR", "NURSE", "BILLING", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN"].includes(role)) return NextResponse.json({ error: "Invalid role." }, { status: 400 });
 
-  const organizationId = (session.user as any).organizationId;
+  const organizationId = access.user!.organizationId;
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) return NextResponse.json({ error: "This email already has an account." }, { status: 409 });

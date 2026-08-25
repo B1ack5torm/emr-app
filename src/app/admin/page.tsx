@@ -15,7 +15,7 @@ async function readJson(response: Response) {
 }
 
 export default function AdminPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const isSuperAdmin = (session?.user as any)?.role === "SUPER_ADMIN";
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
@@ -109,8 +109,10 @@ export default function AdminPage() {
     const data = await res.json();
     setCreatingHospital(false);
     if (!res.ok) { setHospitalError(data.error || "Could not create hospital account."); return; }
-    setHospitalSuccess(`${data.name} was created and ${hospitalAdminEmail} is its administrator.`);
+    setHospitalSuccess(`${data.name} was created. Switching to its hospital workspace…`);
     setHospitalName(""); setHospitalAdminName(""); setHospitalAdminEmail(""); setHospitalAdminPassword("");
+    await update({ activeOrganizationId: data.id });
+    window.location.assign("/admin");
   };
 
   const revokeInvite = async (id: string) => {
@@ -145,15 +147,15 @@ export default function AdminPage() {
   return (
     <div>
       <div className="font-serif text-lg font-semibold mb-1 flex items-center gap-2"><ShieldCheck size={18} /> Admin</div>
-      <p className="text-sm text-inkSoft mb-6">Invite staff, approve join requests, and manage roles for your organization.</p>
+      <p className="text-sm text-inkSoft mb-6">Invite staff, approve join requests, and manage roles for {((session?.user as any)?.organizationName || "your organization")}.</p>
 
       {isSuperAdmin && <div className="mb-8">
         <div className="text-xs font-bold text-inkSoft uppercase mb-2 flex items-center gap-1.5"><ShieldCheck size={13} /> Create hospital account</div>
-        <form onSubmit={createHospital} className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
+        <form onSubmit={createHospital} autoComplete="off" data-form-type="other" className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
           <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Hospital / clinic name</label><input required value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
           <div className="min-w-[160px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator name</label><input required value={hospitalAdminName} onChange={(e) => setHospitalAdminName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
-          <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator email</label><input type="email" required value={hospitalAdminEmail} onChange={(e) => setHospitalAdminEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
-          <div className="min-w-[150px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Temporary password</label><input type="password" required minLength={12} value={hospitalAdminPassword} onChange={(e) => setHospitalAdminPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <div className="min-w-[180px] flex-1"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Administrator email</label><input type="email" name="new-hospital-administrator-email" autoComplete="off" data-1p-ignore data-lpignore="true" required value={hospitalAdminEmail} onChange={(e) => setHospitalAdminEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
+          <div className="min-w-[150px]"><label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Temporary password</label><input type="password" name="new-hospital-temporary-password" autoComplete="new-password" data-1p-ignore data-lpignore="true" required minLength={12} value={hospitalAdminPassword} onChange={(e) => setHospitalAdminPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" /></div>
           <button disabled={creatingHospital} className="flex items-center gap-2 bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg"><ShieldCheck size={14} /> {creatingHospital ? "Creating…" : "Create hospital"}</button>
         </form>
         {hospitalError && <div className="text-alert text-sm mt-2">{hospitalError}</div>}
@@ -206,18 +208,18 @@ export default function AdminPage() {
         </div>
 
         {showManualAdd && (
-          <form onSubmit={createUserManually} className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
+          <form onSubmit={createUserManually} autoComplete="off" data-form-type="other" className="bg-card border border-border rounded-lg p-4 flex flex-wrap items-end gap-3">
             <div className="min-w-[160px]">
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Full name</label>
               <input required value={manualName} onChange={(e) => setManualName(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
             </div>
             <div className="flex-1 min-w-[180px]">
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Email</label>
-              <input type="email" required value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+              <input type="email" name="new-staff-account-email" autoComplete="off" data-1p-ignore data-lpignore="true" required value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
             </div>
             <div className="min-w-[140px]">
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Password</label>
-              <input type="password" required minLength={12} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
+              <input type="password" name="new-staff-temporary-password" autoComplete="new-password" data-1p-ignore data-lpignore="true" required minLength={12} value={manualPassword} onChange={(e) => setManualPassword(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2 bg-[#FCFAF5] text-sm" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-inkSoft uppercase mb-1">Role</label>

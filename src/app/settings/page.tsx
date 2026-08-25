@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [childForm, setChildForm] = useState({ clinicId: "", kind: "department", name: "", durationMinutes: "30" });
   const [practitionerForm, setPractitionerForm] = useState({ userId: "", clinicId: "", departmentId: "", specialty: "", qualification: "", registrationNumber: "", defaultAppointmentMinutes: "30" });
   const [scheduleForm, setScheduleForm] = useState({ practitionerId: "", dayOfWeek: "1", start: "09:00", end: "17:00", appointmentMinutes: "30", breakStart: "13:00", breakEnd: "14:00" });
+  const [scheduleBreakEnabled, setScheduleBreakEnabled] = useState(true);
   const [blockedForm, setBlockedForm] = useState({ practitionerId: "", startsAt: "", endsAt: "", reason: "" });
   const [holidayForm, setHolidayForm] = useState({ clinicId: "", date: "", name: "" });
   const [serviceForm, setServiceForm] = useState({ clinicId: "", code: "", name: "", category: "CONSULTATION", unitPrice: "", taxable: false });
@@ -77,7 +78,7 @@ export default function SettingsPage() {
   const configurePractitioner = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/practitioners", { ...practitionerForm, departmentId: practitionerForm.departmentId || null, defaultAppointmentMinutes: Number(practitionerForm.defaultAppointmentMinutes) }, "Practitioner profile configured.", () => setPractitionerForm((current) => ({ ...current, specialty: "", qualification: "", registrationNumber: "" }))); };
   const configureSchedule = (event: FormEvent) => {
     event.preventDefault();
-    const breaks = scheduleForm.breakStart && scheduleForm.breakEnd ? [{ startMinute: toMinute(scheduleForm.breakStart), endMinute: toMinute(scheduleForm.breakEnd), label: "Break" }] : [];
+    const breaks = scheduleBreakEnabled && scheduleForm.breakStart && scheduleForm.breakEnd ? [{ startMinute: toMinute(scheduleForm.breakStart), endMinute: toMinute(scheduleForm.breakEnd), label: "Break" }] : [];
     void post("/api/settings/schedules", { practitionerId: scheduleForm.practitionerId, dayOfWeek: Number(scheduleForm.dayOfWeek), startMinute: toMinute(scheduleForm.start), endMinute: toMinute(scheduleForm.end), appointmentMinutes: Number(scheduleForm.appointmentMinutes), breaks }, "Weekly schedule saved.", () => undefined);
   };
   const addBlockedPeriod = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/schedules", { kind: "blocked", practitionerId: blockedForm.practitionerId, startsAt: new Date(blockedForm.startsAt).toISOString(), endsAt: new Date(blockedForm.endsAt).toISOString(), reason: blockedForm.reason }, "Blocked period added.", () => setBlockedForm((current) => ({ ...current, startsAt: "", endsAt: "", reason: "" }))); };
@@ -125,7 +126,12 @@ export default function SettingsPage() {
         <Field label="Starts"><input required type="time" value={scheduleForm.start} onChange={(event) => setScheduleForm({ ...scheduleForm, start: event.target.value })} className="input" /></Field>
         <Field label="Ends"><input required type="time" value={scheduleForm.end} onChange={(event) => setScheduleForm({ ...scheduleForm, end: event.target.value })} className="input" /></Field>
         <Field label="Slot minutes"><input required type="number" min="5" max="240" value={scheduleForm.appointmentMinutes} onChange={(event) => setScheduleForm({ ...scheduleForm, appointmentMinutes: event.target.value })} className="input" /></Field>
-        <Field label="Break (optional)"><div className="flex gap-2"><input type="time" value={scheduleForm.breakStart} onChange={(event) => setScheduleForm({ ...scheduleForm, breakStart: event.target.value })} className="input" /><input type="time" value={scheduleForm.breakEnd} onChange={(event) => setScheduleForm({ ...scheduleForm, breakEnd: event.target.value })} className="input" /></div></Field>
+        <div className="block text-sm"><span className="mb-1 block text-xs font-bold uppercase text-inkSoft">Break (optional)</span>
+          {scheduleBreakEnabled ? <div className="space-y-2">
+            <div className="flex gap-2"><input aria-label="Break starts" required type="time" value={scheduleForm.breakStart} onChange={(event) => setScheduleForm({ ...scheduleForm, breakStart: event.target.value })} className="input" /><input aria-label="Break ends" required type="time" value={scheduleForm.breakEnd} onChange={(event) => setScheduleForm({ ...scheduleForm, breakEnd: event.target.value })} className="input" /></div>
+            <button type="button" onClick={() => { setScheduleBreakEnabled(false); setScheduleForm((current) => ({ ...current, breakStart: "", breakEnd: "" })); }} className="text-xs font-semibold text-alert hover:underline">Remove break</button>
+          </div> : <button type="button" onClick={() => { setScheduleBreakEnabled(true); setScheduleForm((current) => ({ ...current, breakStart: "13:00", breakEnd: "14:00" })); }} className="w-full rounded-lg border border-dashed border-border bg-[#FCFAF5] px-3 py-2 text-sm font-semibold text-accentDark hover:border-accent/40 hover:bg-accentSoft">+ Add break</button>}
+        </div>
         <Submit busy={busy}>Save weekly schedule</Submit>
       </form>
       <div className="mt-5 space-y-2">{practitioners.map((practitioner) => <div key={practitioner.id} className="rounded-lg border border-border p-3 text-sm"><p className="font-semibold">Dr. {practitioner.user.name} · {practitioner.specialty}</p><p className="text-xs text-inkSoft">{practitioner.clinic.name}{practitioner.department ? ` / ${practitioner.department.name}` : ""}</p><p className="mt-1 text-xs">{practitioner.schedules.map((schedule) => `${DAYS[schedule.dayOfWeek]} ${minuteLabel(schedule.startMinute)}–${minuteLabel(schedule.endMinute)} (${schedule.appointmentMinutes}m)`).join(" · ") || "No weekly hours configured"}</p></div>)}</div>

@@ -17,5 +17,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   await audit({ organizationId: access.user.organizationId, userId: access.user.id, patientId: document.patientId, action: "DOCUMENT_DOWNLOADED", resourceType: "StoredDocument", resourceId: document.id, request });
   const safeName = document.originalName.replace(/[\r\n"\\]/g, "_");
   const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-  return new NextResponse(body, { headers: { "Content-Type": document.contentType, "Content-Length": String(document.sizeBytes), "Content-Disposition": `attachment; filename="${safeName}"`, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
+  const disposition = request.nextUrl.searchParams.get("inline") === "1" ? "inline" : "attachment";
+  return new NextResponse(body, { headers: { "Content-Type": document.contentType, "Content-Length": String(document.sizeBytes), "Content-Disposition": `${disposition}; filename="${safeName}"`, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
 }

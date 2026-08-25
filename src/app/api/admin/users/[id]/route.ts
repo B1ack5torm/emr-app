@@ -12,9 +12,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const session = { user: access.user } as any;
 
   const orgId = (session.user as any).organizationId;
-  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
   const target = await prisma.user.findUnique({ where: { id: params.id } });
-  if (!target || (!isSuperAdmin && target.organizationId !== orgId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!target || target.organizationId !== orgId) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (target.role === "SUPER_ADMIN") return NextResponse.json({ error: "The Super Admin role cannot be changed here." }, { status: 403 });
 
   const body = await req.json();
@@ -51,9 +50,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const session = { user: access.user } as any;
 
   const orgId = (session.user as any).organizationId;
-  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
   const target = await prisma.user.findUnique({ where: { id: params.id } });
-  if (!target || (!isSuperAdmin && target.organizationId !== orgId)) {
+  if (!target || target.organizationId !== orgId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (target.role === "SUPER_ADMIN") return NextResponse.json({ error: "The Super Admin account cannot be removed." }, { status: 403 });

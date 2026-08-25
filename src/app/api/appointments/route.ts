@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
   if (access.response) return access.response;
   const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
-  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
   const date = req.nextUrl.searchParams.get("date");
   const start = date ? new Date(`${date}T00:00:00`) : new Date();
   if (Number.isNaN(start.getTime())) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
@@ -19,16 +18,16 @@ export async function GET(req: NextRequest) {
 
   const [appointments, onlineAppointments, doctors] = await Promise.all([
     prisma.appointment.findMany({
-      where: { ...(isSuperAdmin ? {} : { organizationId }), scheduledAt: { gte: start, lt: end } },
+      where: { organizationId, scheduledAt: { gte: start, lt: end } },
       include: { patient: { select: { id: true, name: true, mrn: true, phone: true, email: true } }, doctor: { select: { id: true, name: true } } },
       orderBy: { scheduledAt: "asc" },
     }),
     prisma.appointmentRequest.findMany({
-      where: { ...(isSuperAdmin ? {} : { organizationId }), status: { in: ["CONFIRMED", "CHECKED_IN"] }, requestedAt: { gte: start, lt: end } },
+      where: { organizationId, status: { in: ["CONFIRMED", "CHECKED_IN"] }, requestedAt: { gte: start, lt: end } },
       include: { doctor: { select: { id: true, name: true } } },
       orderBy: { requestedAt: "asc" },
     }),
-    prisma.user.findMany({ where: { ...(isSuperAdmin ? {} : { organizationId }), role: "DOCTOR", status: "ACTIVE" }, select: { id: true, name: true, practitionerProfile: { select: { specialty: true, clinic: { select: { id: true, name: true, appointmentTypes: { where: { active: true }, select: { id: true, name: true, durationMinutes: true } } } } } } }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { organizationId, role: "DOCTOR", status: "ACTIVE" }, select: { id: true, name: true, practitionerProfile: { select: { specialty: true, clinic: { select: { id: true, name: true, appointmentTypes: { where: { active: true }, select: { id: true, name: true, durationMinutes: true } } } } } } }, orderBy: { name: "asc" } }),
   ]);
   const schedule = [
     ...appointments.map((appointment) => ({ ...appointment, source: "INTERNAL" as const })),

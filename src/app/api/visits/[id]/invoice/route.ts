@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ItemCategory } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { audit, requirePermission } from "@/lib/security";
-import { calculateInvoice } from "@/lib/domain/billing";
+import { calculateInvoice, CatalogPriceOption, resolveCatalogPrice, splitOrderedTests } from "@/lib/domain/billing";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const access = await requirePermission("invoice:create");
@@ -29,16 +27,36 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const visit = await prisma.visit.findUnique({
     where: { id: params.id },
-    include: { patient: true, prescriptions: true, testsOrdered: true, imagingOrders: true, invoice: true },
+    include: {
+      patient: true, prescriptions: true, testsOrdered: true, imagingOrders: true, invoice: true,
+      appointment: { select: { clinicId: true, appointmentType: { select: { name: true } } } },
+      doctor: { select: { practitionerProfile: { select: { clinicId: true, specialty: true } } } },
+    },
   });
   if (!visit || visit.patient.organizationId !== organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (visit.invoice) return NextResponse.json({ error: "An invoice already exists for this visit." }, { status: 409 });
 
+  let clinicId = visit.appointment?.clinicId || visit.doctor?.practitionerProfile?.clinicId || null;
+  if (!clinicId) {
+    const clinics = await prisma.clinicLocation.findMany({ where: { organizationId, active: true }, select: { id: true }, take: 2 });
+    if (clinics.length === 1) clinicId = clinics[0].id;
+  }
+  const [configuredPrices, taxRules] = clinicId ? await Promise.all([
+    prisma.clinicPrice.findMany({ where: { organizationId, clinicId, active: true, service: { active: true } }, include: { service: { select: { category: true, code: true, name: true, taxable: true } } } }),
+    prisma.taxConfiguration.findMany({ where: { organizationId, clinicId, active: true }, orderBy: { effectiveFrom: "desc" } }),
+  ]) : [[], []];
+  const catalog: CatalogPriceOption[] = configuredPrices.map((price) => ({ ...price.service, unitPrice: price.unitPrice }));
+  const now = new Date(), activeTax = taxRules.find((rule) => (!rule.effectiveFrom || rule.effectiveFrom <= now) && (!rule.effectiveTo || rule.effectiveTo >= now));
+  const pricedLine = (category: ItemCategory, description: string, lookupTerms: string[], quantity = 1) => {
+    const price = resolveCatalogPrice(category, lookupTerms, catalog);
+    return { category, description, quantity, unitPrice: price?.unitPrice || 0, taxRatePercent: price?.taxable ? activeTax?.ratePercent || 0 : 0 };
+  };
+  const specialtyConsultation = visit.doctor?.practitionerProfile?.specialty ? `${visit.doctor.practitionerProfile.specialty} Consultation` : "";
   const draftItems = [
-    { category: "CONSULTATION" as const, description: `Consultation${visit.chiefComplaint ? " — " + visit.chiefComplaint : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 },
-    ...visit.prescriptions.map((p) => ({ category: "MEDICINE" as const, description: `${p.medicine}${p.dosage ? " " + p.dosage : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
-    ...visit.testsOrdered.map((t) => ({ category: "TEST" as const, description: t.name, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
-    ...visit.imagingOrders.map((o) => ({ category: "IMAGING" as const, description: `${o.procedureDescription}${o.bodyPart ? " - " + o.bodyPart : ""}`, quantity: 1, unitPrice: 0, taxRatePercent: 0 })),
+    pricedLine("CONSULTATION", `Consultation${visit.chiefComplaint ? " — " + visit.chiefComplaint : ""}`, [visit.appointment?.appointmentType?.name || "", specialtyConsultation, "General Consultation"]),
+    ...visit.prescriptions.map((prescription) => pricedLine("MEDICINE", `${prescription.medicine}${prescription.dosage ? " " + prescription.dosage : ""}`, [prescription.medicine])),
+    ...visit.testsOrdered.flatMap((test) => splitOrderedTests(test.name).map((name) => pricedLine("TEST", name, [name]))),
+    ...visit.imagingOrders.map((order) => pricedLine("IMAGING", `${order.procedureDescription}${order.bodyPart ? " - " + order.bodyPart : ""}`, [order.procedureDescription])),
   ];
   const { items: computed, subtotal, taxTotal, grandTotal } = calculateInvoice(draftItems);
 

@@ -1,4 +1,5 @@
 export type BillingLineInput = { category: string; description: string; quantity: number; unitPrice: number; taxRatePercent: number; discount?: number };
+export type CatalogPriceOption = { category: string; code: string; name: string; unitPrice: number; taxable: boolean };
 
 export type SettlementStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "REFUNDED";
 
@@ -28,4 +29,33 @@ export function calculateInvoice(lines: BillingLineInput[]) {
     return { ...line, description: line.description.trim(), discount, amount, taxAmount, total: amount + taxAmount };
   });
   return { items, subtotal, discountTotal, taxTotal, grandTotal: subtotal - discountTotal + taxTotal };
+}
+
+function normalizedServiceText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+export function resolveCatalogPrice(category: string, lookupTerms: string[], options: CatalogPriceOption[]) {
+  const candidates = options.filter((option) => option.category === category && Number.isSafeInteger(option.unitPrice) && option.unitPrice >= 0);
+  let best: { option: CatalogPriceOption; score: number } | null = null;
+  for (const [termIndex, term] of lookupTerms.entries()) {
+    const lookup = normalizedServiceText(term);
+    if (!lookup) continue;
+    for (const option of candidates) {
+      const name = normalizedServiceText(option.name), code = normalizedServiceText(option.code);
+      let match = 0;
+      if (lookup === name) match = 100;
+      else if (lookup === code) match = 95;
+      else if (name.length >= 3 && lookup.includes(name)) match = 80 + Math.min(name.length, 19);
+      else if (lookup.length >= 3 && name.includes(lookup)) match = 60 + Math.min(lookup.length, 19);
+      if (!match) continue;
+      const score = (lookupTerms.length - termIndex) * 1_000 + match;
+      if (!best || score > best.score) best = { option, score };
+    }
+  }
+  return best?.option || null;
+}
+
+export function splitOrderedTests(value: string) {
+  return value.split(/[,;]+/).map((part) => part.trim().replace(/^and\s+/i, "").replace(/[.]+$/, "").trim()).filter(Boolean);
 }

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, Number(request.nextUrl.searchParams.get("page")) || 1), pageSize = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("pageSize")) || 25));
   const type = request.nextUrl.searchParams.get("type"), status = request.nextUrl.searchParams.get("status"), patientId = request.nextUrl.searchParams.get("patientId"), visitId = request.nextUrl.searchParams.get("visitId");
   const where: any = { organizationId: access.user.organizationId, ...(type ? { type } : {}), ...(status ? { status } : {}), ...(patientId ? { patientId } : {}), ...(visitId ? { visitId } : {}) };
-  const [orders, total] = await prisma.$transaction([prisma.diagnosticOrder.findMany({ where, include: { patient: { select: { id: true, mrn: true, name: true } }, orderingPractitioner: { select: { id: true, name: true } }, documents: { select: { id: true, originalName: true } }, observations: { orderBy: { createdAt: "asc" } } }, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }), prisma.diagnosticOrder.count({ where })]);
+  const [orders, total] = await prisma.$transaction([prisma.diagnosticOrder.findMany({ where, include: { patient: { select: { id: true, mrn: true, name: true } }, orderingPractitioner: { select: { id: true, name: true } }, documents: { where: { deletedAt: null }, select: { id: true, originalName: true, contentType: true, sizeBytes: true, createdAt: true }, orderBy: { createdAt: "desc" } }, observations: { orderBy: { createdAt: "asc" } } }, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }), prisma.diagnosticOrder.count({ where })]);
   return NextResponse.json({ page, pageSize, total, orders });
 }
 

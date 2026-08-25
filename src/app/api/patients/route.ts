@@ -9,12 +9,11 @@ export async function GET(req: NextRequest) {
   if (access.response) return access.response;
   const session = { user: access.user } as any;
   const organizationId = (session.user as any).organizationId;
-  const isSuperAdmin = (session.user as any).role === "SUPER_ADMIN";
 
   const q = req.nextUrl.searchParams.get("q") || "";
 
   const patients = await prisma.patient.findMany({
-    where: { ...(isSuperAdmin ? {} : { organizationId }), active: true, mergedIntoId: null, ...(q ? { OR: [{ mrn: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }, { email: { contains: q, mode: "insensitive" } }, { identifiers: { some: { value: { contains: q, mode: "insensitive" }, active: true } } }] } : {}) },
+    where: { organizationId, active: true, mergedIntoId: null, ...(q ? { OR: [{ mrn: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }, { email: { contains: q, mode: "insensitive" } }, { identifiers: { some: { value: { contains: q, mode: "insensitive" }, active: true } } }] } : {}) },
     include: { allergies: true, identifiers: { where: { active: true } }, visits: { select: { id: true, status: true } } },
     orderBy: { createdAt: "desc" },
   });

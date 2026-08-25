@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (access.response) return access.response;
   const user = access.user as any;
   const patient = await prisma.patient.findUnique({ where: { id: params.id }, select: { organizationId: true, active: true, mergedIntoId: true } });
-  if (!patient || !patient.active || patient.mergedIntoId || (user.role !== "SUPER_ADMIN" && patient.organizationId !== user.organizationId)) return NextResponse.json({ error: "Patient not found" }, { status: 404 });
+  if (!patient || !patient.active || patient.mergedIntoId || patient.organizationId !== user.organizationId) return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   const body = await req.json().catch(() => ({}));
   const kind = params.kind.toUpperCase();
   let updated: any;

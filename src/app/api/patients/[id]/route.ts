@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: { allergies: true, visits: { orderBy: { createdAt: "desc" }, include: { prescriptions: true, testsOrdered: true, doctor: { select: { name: true } } } } },
   });
 
-  if (!patient || (role !== "SUPER_ADMIN" && patient.organizationId !== organizationId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!patient || patient.organizationId !== organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await audit({ organizationId: patient.organizationId, userId: (session.user as any).id, patientId: patient.id, action: "PATIENT_VIEWED", resourceType: "Patient", resourceId: patient.id, request: _req });
   return NextResponse.json(patient);
 }
@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const role = (session.user as any).role;
 
   const patient = await prisma.patient.findUnique({ where: { id: params.id }, select: { organizationId: true, version: true, portalAccount: { select: { id: true } } } });
-  if (!patient || (role !== "SUPER_ADMIN" && patient.organizationId !== (session.user as any).organizationId)) {
+  if (!patient || patient.organizationId !== (session.user as any).organizationId) {
     return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   }
 

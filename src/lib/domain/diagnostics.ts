@@ -12,6 +12,11 @@ export function canTransitionDiagnosticOrder(from: DiagnosticState, to: Diagnost
   return transitions[from]?.includes(to) || false;
 }
 
+export function canReviewDiagnosticOrder(role: string | null | undefined, userId: string | null | undefined, orderingPractitionerId: string) {
+  if (["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) return true;
+  return role === "DOCTOR" && !!userId && userId === orderingPractitionerId;
+}
+
 export interface DiagnosticIntegrationAdapter {
   sendADT(message: unknown): Promise<void>;
   sendORM(order: unknown): Promise<void>;

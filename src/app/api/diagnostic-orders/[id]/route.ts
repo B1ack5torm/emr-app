@@ -2,13 +2,14 @@ import { DiagnosticOrderStatus, Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { audit, requirePermission } from "@/lib/security";
-import { canTransitionDiagnosticOrder, DiagnosticState } from "@/lib/domain/diagnostics";
+import { canReviewDiagnosticOrder, canTransitionDiagnosticOrder, DiagnosticState } from "@/lib/domain/diagnostics";
 import { exactlyOneObservationValue, interpretNumericObservation } from "@/lib/domain/observations";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const body = await request.json(); const desired = String(body.status || "") as DiagnosticState;
   const access = await requirePermission(desired === "REVIEWED" ? "result:review" : "order:create"); if (access.response) return access.response;
   const order = await prisma.diagnosticOrder.findFirst({ where: { id: params.id, organizationId: access.user.organizationId } }); if (!order) return NextResponse.json({ error: "Diagnostic order not found." }, { status: 404 });
+  if (desired === "REVIEWED" && !canReviewDiagnosticOrder(access.user.role, access.user.id, order.orderingPractitionerId)) return NextResponse.json({ error: "Only the ordering doctor or an authorized administrator can review this report." }, { status: 403 });
   if (!canTransitionDiagnosticOrder(order.status as DiagnosticState, desired)) return NextResponse.json({ error: `Cannot change order from ${order.status} to ${desired}.` }, { status: 409 });
   const reason = String(body.reason || "").trim(); if (desired === "CANCELLED" && !reason) return NextResponse.json({ error: "Cancellation reason is required." }, { status: 400 });
   const scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null; if (desired === "SCHEDULED" && (!scheduledAt || Number.isNaN(scheduledAt.getTime()))) return NextResponse.json({ error: "A valid schedule date and time are required." }, { status: 400 });
