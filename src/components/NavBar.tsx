@@ -71,7 +71,8 @@ export default function NavBar() {
   ];
 
   return (
-    <div className="bg-card border-b border-border px-6 py-4 print:hidden">
+    <div className="border-b border-border bg-card py-4 print:hidden">
+      <div className="mx-auto w-full max-w-[90rem] px-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
@@ -149,6 +150,7 @@ export default function NavBar() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

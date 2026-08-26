@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <NavBar />
-          <main className="max-w-5xl mx-auto p-6">{children}</main>
+          <main className="mx-auto w-full max-w-[90rem] p-6">{children}</main>
         </Providers>
       </body>
     </html>

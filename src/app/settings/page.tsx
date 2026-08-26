@@ -86,7 +86,7 @@ export default function SettingsPage() {
   const configureService = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/billing", { ...serviceForm, unitPrice: Math.round(Number(serviceForm.unitPrice) * 100) }, "Service and clinic price saved.", () => setServiceForm((current) => ({ ...current, code: "", name: "", unitPrice: "" }))); };
   const configureTax = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/taxes", { ...taxForm, ratePercent: Number(taxForm.ratePercent), effectiveFrom: taxForm.effectiveFrom || null }, "Tax configuration added.", () => setTaxForm((current) => ({ ...current, ratePercent: "", effectiveFrom: "" }))); };
 
-  return <div className="max-w-6xl">
+  return <div className="w-full">
     <h1 className="font-serif text-xl font-semibold">Clinic configuration</h1>
     <p className="mt-1 text-sm text-inkSoft">Configure care locations, clinician availability, billable services, and tax rules.</p>
     {error && <p className="mt-4 rounded-lg bg-alertSoft px-3 py-2 text-sm text-alert">{error}</p>}

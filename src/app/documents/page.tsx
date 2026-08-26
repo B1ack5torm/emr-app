@@ -58,7 +58,7 @@ export default function DocumentsPage() {
   };
   const orderLabel = (id?: string) => orders.find((order) => order.id === id)?.orderNumber;
 
-  return <div className="max-w-5xl">
+  return <div className="w-full">
     <h1 className="font-serif text-xl font-semibold">Patient documents</h1>
     <p className="mt-1 text-sm text-inkSoft">Authorized PDF and image uploads. Private storage keys and server paths are never exposed.</p>
     <div className="relative mt-5 max-w-lg"><input value={query} onChange={(event) => { setQuery(event.target.value); setPatient(null); }} placeholder="Search patient by name, MRN, or phone" className="w-full rounded-lg border border-border bg-card px-3 py-2.5" />{patients.length > 0 && <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">{patients.map((value) => <button key={value.id} onClick={() => selectPatient(value)} className="block w-full px-3 py-2 text-left text-sm hover:bg-accentSoft"><b>{value.name}</b> · {value.mrn}</button>)}</div>}</div>

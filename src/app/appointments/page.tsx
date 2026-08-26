@@ -44,7 +44,7 @@ export default function AppointmentsPage() {
     await load();
   };
 
-  return <div className="max-w-5xl">
+  return <div className="w-full">
     <div className="flex justify-between items-center gap-4 mb-5">
       <div><div className="font-serif text-xl font-semibold">Appointment Schedule</div><p className="text-sm text-inkSoft mt-1">Book patients and check them into the doctor&apos;s queue.</p></div>
       <button onClick={() => { setError(""); setNotice(""); setShowForm(true); }} className="flex items-center gap-2 bg-accent text-white rounded-lg px-4 py-2.5 text-sm font-semibold"><Plus size={16} /> New appointment</button>

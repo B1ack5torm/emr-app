@@ -127,7 +127,7 @@ export default function DiagnosticsPage() {
   const userId = (session?.user as any)?.id as string | undefined;
   const canReviewOrder = (order: Order) => canReviewDiagnosticOrder(role, userId, order.orderingPractitioner.id);
 
-  return <div className="max-w-6xl">
+  return <div className="w-full">
     <div>
       <h1 className="font-serif text-xl font-semibold">Diagnostic orders</h1>
       <p className="mt-1 text-sm text-inkSoft">Start collection or processing, attach the final report to the order, and send it to the ordering doctor for review.</p>

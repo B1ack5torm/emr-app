@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Activity, ArrowRight, CalendarDays, Check, ChevronRight, ClipboardList, FileText, HeartPulse, LockKeyhole, ShieldCheck, Sparkles, Stethoscope, UsersRound } from "lucide-react";
+import { Activity, CalendarDays, Check, ChevronRight, ClipboardList, FileText, HeartPulse, LockKeyhole, ShieldCheck, Sparkles, Stethoscope, UsersRound } from "lucide-react";
 
 const workflows = [
   { id: "frontdesk", label: "Front desk", icon: UsersRound, title: "A calm start to every visit.", description: "Register patients in seconds, capture essential details, and route each visit to the right care team.", stat: "1 unified intake", panel: "Patient intake", rows: [["Patient profile", "Complete"], ["Allergy alert", "Reviewed"], ["Assigned doctor", "Dr. Sharma"]] },
@@ -11,24 +11,68 @@ const workflows = [
 ];
 
 const features = [
-  { icon: UsersRound, title: "Patient-centered intake", text: "One patient profile for registration, allergies, visit history, and contact details." },
-  { icon: CalendarDays, title: "Scheduling that flows", text: "Book appointments, assign doctors, and keep queues up to date in real time." },
-  { icon: FileText, title: "Clear clinical records", text: "Capture notes, prescriptions, tests, and signed reports without switching tools." },
-  { icon: Activity, title: "Care coordination", text: "Move a patient smoothly from front desk to consultation, billing, and follow-up." },
-  { icon: ShieldCheck, title: "Permissioned access", text: "Role-aware workspaces for reception, doctors, administrators, and super admins." },
-  { icon: LockKeyhole, title: "Built with care", text: "A focused workspace that keeps sensitive care information organized and protected." },
+  {
+    icon: UsersRound,
+    title: "Patient-centered intake",
+    text: "One patient profile for registration, allergies, visit history, and contact details.",
+    detail: "Give the front desk a complete, reusable patient record from the very first interaction.",
+    points: ["Capture demographics and contacts once", "Keep allergy and visit context easy to spot", "Find returning patients without duplicate entry"],
+    outcome: "Less repetitive data entry",
+  },
+  {
+    icon: CalendarDays,
+    title: "Scheduling that flows",
+    text: "Book appointments, assign doctors, and keep queues up to date in real time.",
+    detail: "Keep availability, appointments, and the day’s clinical queue connected in one view.",
+    points: ["Match patients with the right practitioner", "See daily schedules and live queue status", "Update appointments without losing context"],
+    outcome: "A calmer, more predictable day",
+  },
+  {
+    icon: FileText,
+    title: "Clear clinical records",
+    text: "Capture notes, prescriptions, tests, and signed reports without switching tools.",
+    detail: "Document the full consultation while keeping the patient’s history close at hand.",
+    points: ["Record findings and clinical notes", "Create prescriptions and diagnostic orders", "Keep signed reports with the visit record"],
+    outcome: "A clearer longitudinal record",
+  },
+  {
+    icon: Activity,
+    title: "Care coordination",
+    text: "Move a patient smoothly from front desk to consultation, billing, and follow-up.",
+    detail: "Make each handoff visible so every team knows what has happened and what comes next.",
+    points: ["Follow the patient through each stage", "Share timely status across care teams", "Connect consultation, billing, and follow-up"],
+    outcome: "Fewer gaps between teams",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Permissioned access",
+    text: "Role-aware workspaces for reception, doctors, administrators, and super admins.",
+    detail: "Give each person a workspace shaped around the responsibilities of their role.",
+    points: ["Separate reception and clinical views", "Keep administrative controls focused", "Reduce unnecessary access to patient details"],
+    outcome: "The right view for every role",
+  },
+  {
+    icon: LockKeyhole,
+    title: "Built with care",
+    text: "A focused workspace that keeps sensitive care information organized and protected.",
+    detail: "Support thoughtful day-to-day handling of care information with clear, consistent workflows.",
+    points: ["Keep records organized by patient and visit", "Use clear sign-in and access boundaries", "Maintain consistent documentation habits"],
+    outcome: "More confidence in daily work",
+  },
 ];
 
 export default function LandingExperience() {
   const [active, setActive] = useState(0);
+  const [expandedFeature, setExpandedFeature] = useState<number | null>(null);
   const workflow = workflows[active];
   const WorkflowIcon = workflow.icon;
 
   return (
-    <div className="landing-shell -mx-6 -my-6 overflow-hidden bg-[#F6F7F3] text-[#16342D]">
+    <div className="landing-shell relative left-1/2 -my-6 w-[100dvw] max-w-none -translate-x-1/2 overflow-hidden bg-[#F6F7F3] text-[#16342D]">
+      <div className="landing-healthcare-bg" aria-hidden="true" />
       <div className="landing-orb landing-orb-one" />
       <div className="landing-orb landing-orb-two" />
-      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
+      <header className="relative z-10 mx-auto flex max-w-[90rem] items-center justify-between px-6 py-5 lg:px-10">
         <Link href="/" className="group flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24705D] text-white shadow-[0_8px_20px_rgba(36,112,93,0.25)] transition-transform group-hover:rotate-[-6deg]"><Stethoscope size={21} /></span>
           <span><span className="block font-serif text-xl font-bold tracking-tight">EMR App</span><span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-[#6B8178]">Care, connected</span></span>
@@ -42,7 +86,7 @@ export default function LandingExperience() {
       </header>
 
       <main className="relative z-10">
-        <section className="mx-auto grid max-w-7xl items-center gap-12 px-6 pb-20 pt-14 lg:grid-cols-[.95fr_1.05fr] lg:px-8 lg:pb-28 lg:pt-20">
+        <section className="mx-auto grid max-w-[90rem] items-center gap-12 px-6 pb-20 pt-14 lg:grid-cols-[.95fr_1.05fr] lg:px-10 lg:pb-28 lg:pt-20">
           <div className="max-w-2xl landing-rise">
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#CDE1D8] bg-white/80 px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[#216450] shadow-sm"><Sparkles size={13} /> The modern clinical workspace</p>
             <h1 className="font-serif text-4xl font-bold leading-[1.04] tracking-[-0.035em] text-[#14382F] sm:text-5xl lg:text-[4.25rem]">More focus on care.<br /><span className="text-[#28725E]">Less friction</span> everywhere else.</h1>
@@ -62,21 +106,78 @@ export default function LandingExperience() {
           </div>
         </section>
 
-        <section id="workflow" className="border-y border-[#DCE6E0] bg-white/80 py-16 backdrop-blur-sm sm:py-20"><div className="mx-auto max-w-7xl px-6 lg:px-8"><div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr]"><div><p className="text-sm font-bold uppercase tracking-[0.16em] text-[#28725E]">One connected workflow</p><h2 className="mt-3 font-serif text-3xl font-bold tracking-[-0.025em] text-[#173B31] sm:text-4xl">Designed around how care actually happens.</h2><p className="mt-4 text-base leading-7 text-[#637A71]">Explore the workflow and see how every handoff stays visible, clear, and accountable.</p></div><div><div className="flex flex-wrap gap-2">{workflows.map((item, index) => { const Icon = item.icon; return <button key={item.id} onClick={() => setActive(index)} className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-bold transition ${active === index ? "bg-[#163F35] text-white shadow-lg shadow-[#163F35]/15" : "border border-[#D7E3DD] bg-white text-[#496B60] hover:border-[#75A794]"}`}><Icon size={16} />{item.label}</button>; })}</div><div className="mt-6 grid overflow-hidden rounded-2xl border border-[#DCE7E1] bg-[#F8FBF9] sm:grid-cols-[1fr_.8fr]"><div className="p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[0.15em] text-[#3B856E]">{workflow.label}</p><h3 className="mt-3 font-serif text-2xl font-bold text-[#173B31]">{workflow.title}</h3><p className="mt-3 leading-7 text-[#60776E]">{workflow.description}</p></div><div className="relative min-h-48 bg-[#D8ECE3] p-6"><div className="absolute inset-0 opacity-50 [background-image:radial-gradient(#74A993_1px,transparent_1px)] [background-size:16px_16px]" /><div className="relative rounded-2xl bg-white p-4 shadow-xl"><div className="flex items-center justify-between"><span className="rounded-lg bg-[#E5F2EC] p-2 text-[#24705D]"><WorkflowIcon size={18} /></span><span className="h-2 w-2 rounded-full bg-[#42A878]" /></div><p className="mt-5 font-serif text-lg font-bold">{workflow.panel}</p><p className="mt-1 text-xs text-[#70867D]">Simple. Visible. Connected.</p></div></div></div></div></div></div></section>
+        <section id="workflow" className="border-y border-[#DCE6E0] bg-white/80 py-16 backdrop-blur-sm sm:py-20"><div className="mx-auto max-w-[90rem] px-6 lg:px-10"><div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr]"><div><p className="text-sm font-bold uppercase tracking-[0.16em] text-[#28725E]">One connected workflow</p><h2 className="mt-3 font-serif text-3xl font-bold tracking-[-0.025em] text-[#173B31] sm:text-4xl">Designed around how care actually happens.</h2><p className="mt-4 text-base leading-7 text-[#637A71]">Explore the workflow and see how every handoff stays visible, clear, and accountable.</p></div><div><div className="flex flex-wrap gap-2">{workflows.map((item, index) => { const Icon = item.icon; return <button key={item.id} onClick={() => setActive(index)} className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-bold transition ${active === index ? "bg-[#163F35] text-white shadow-lg shadow-[#163F35]/15" : "border border-[#D7E3DD] bg-white text-[#496B60] hover:border-[#75A794]"}`}><Icon size={16} />{item.label}</button>; })}</div><div className="mt-6 grid overflow-hidden rounded-2xl border border-[#DCE7E1] bg-[#F8FBF9] sm:grid-cols-[1fr_.8fr]"><div className="p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[0.15em] text-[#3B856E]">{workflow.label}</p><h3 className="mt-3 font-serif text-2xl font-bold text-[#173B31]">{workflow.title}</h3><p className="mt-3 leading-7 text-[#60776E]">{workflow.description}</p></div><div className="relative min-h-48 bg-[#D8ECE3] p-6"><div className="absolute inset-0 opacity-50 [background-image:radial-gradient(#74A993_1px,transparent_1px)] [background-size:16px_16px]" /><div className="relative rounded-2xl bg-white p-4 shadow-xl"><div className="flex items-center justify-between"><span className="rounded-lg bg-[#E5F2EC] p-2 text-[#24705D]"><WorkflowIcon size={18} /></span><span className="h-2 w-2 rounded-full bg-[#42A878]" /></div><p className="mt-5 font-serif text-lg font-bold">{workflow.panel}</p><p className="mt-1 text-xs text-[#70867D]">Simple. Visible. Connected.</p></div></div></div></div></div></div></section>
 
-        <section id="features" className="mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-28"><div className="mx-auto max-w-2xl text-center"><p className="text-sm font-bold uppercase tracking-[0.16em] text-[#28725E]">Built for the complete care journey</p><h2 className="mt-3 font-serif text-3xl font-bold tracking-[-0.025em] text-[#173B31] sm:text-4xl">Powerful where it counts. Simple where it matters.</h2></div><div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{features.map((feature, index) => { const Icon = feature.icon; return <article key={feature.title} className="group rounded-2xl border border-[#DCE6E0] bg-white/80 p-6 transition duration-300 hover:-translate-y-1 hover:border-[#8ABAA7] hover:shadow-xl hover:shadow-[#2D6656]/10"><span className={`inline-flex rounded-xl p-3 ${index % 3 === 1 ? "bg-[#FFF0D7] text-[#A96F1C]" : "bg-[#E5F2EC] text-[#26715D]"}`}><Icon size={21} /></span><h3 className="mt-5 font-serif text-xl font-bold text-[#193E34]">{feature.title}</h3><p className="mt-2 text-sm leading-6 text-[#637A71]">{feature.text}</p><span className="mt-5 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-[#34745F] opacity-0 transition group-hover:opacity-100">Explore <ArrowRight size={13} /></span></article>; })}</div></section>
+        <section id="features" className="mx-auto max-w-[90rem] px-6 py-20 lg:px-10 lg:py-28">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#28725E]">Built for the complete care journey</p>
+            <h2 className="mt-3 font-serif text-3xl font-bold tracking-[-0.025em] text-[#173B31] sm:text-4xl">Powerful where it counts. Simple where it matters.</h2>
+            <p className="mt-4 text-base leading-7 text-[#637A71]">Explore each capability to see how it supports your team through a complete day of care.</p>
+          </div>
+          <div className="mt-12 grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              const isExpanded = expandedFeature === index;
+              const detailId = `feature-detail-${index}`;
+
+              return (
+                <article
+                  key={feature.title}
+                  className={`group h-fit rounded-2xl border bg-white/80 p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#2D6656]/10 ${isExpanded ? "border-[#65A38B] shadow-lg shadow-[#2D6656]/10" : "border-[#DCE6E0] hover:border-[#8ABAA7]"}`}
+                >
+                  <span className={`inline-flex rounded-xl p-3 ${index % 3 === 1 ? "bg-[#FFF0D7] text-[#A96F1C]" : "bg-[#E5F2EC] text-[#26715D]"}`}><Icon size={21} /></span>
+                  <h3 className="mt-5 font-serif text-xl font-bold text-[#193E34]">{feature.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#637A71]">{feature.text}</p>
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    aria-controls={detailId}
+                    onClick={() => setExpandedFeature(isExpanded ? null : index)}
+                    className="mt-5 inline-flex items-center gap-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-[#34745F] outline-none transition hover:text-[#173F34] focus-visible:ring-2 focus-visible:ring-[#65A38B] focus-visible:ring-offset-4"
+                  >
+                    {isExpanded ? "Hide details" : "Explore"}
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isExpanded ? "rotate-90" : "group-hover:translate-x-0.5"}`} />
+                  </button>
+
+                  {isExpanded && (
+                    <div id={detailId} className="feature-details-open">
+                      <div className="mt-5 border-t border-[#E1EAE5] pt-5">
+                        <p className="text-sm leading-6 text-[#3E6257]">{feature.detail}</p>
+                        <ul className="mt-4 space-y-3">
+                          {feature.points.map((point) => (
+                            <li key={point} className="flex items-start gap-2.5 text-sm leading-5 text-[#567268]">
+                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E5F2EC] text-[#24705D]"><Check size={12} strokeWidth={3} /></span>
+                              {point}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-5 rounded-xl bg-[#EFF6F2] px-3.5 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6B8178]">What your team gains</p>
+                          <p className="mt-1 font-serif text-sm font-bold text-[#214D40]">{feature.outcome}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
       </main>
       <footer className="relative z-10 border-t border-[#DDE7E1] px-6 py-7 text-center text-sm text-[#6B8178]">© {new Date().getFullYear()} EMR App. Designed for modern care teams.</footer>
       <style jsx global>{`
         .landing-shell { min-height: 100vh; position: relative; }
+        .landing-healthcare-bg { pointer-events: none; position: fixed; inset: 0; background: linear-gradient(rgba(246,247,243,.28), rgba(246,247,243,.48)), url('/assets/healthcare-background.webp') center / cover no-repeat; opacity: .58; }
         .landing-orb { pointer-events: none; position: absolute; border-radius: 9999px; filter: blur(2px); opacity: .6; }
         .landing-orb-one { width: 35rem; height: 35rem; top: -14rem; right: -10rem; background: radial-gradient(circle, #D7EFE2 0%, rgba(215,239,226,0) 68%); }
         .landing-orb-two { width: 28rem; height: 28rem; top: 28rem; left: -16rem; background: radial-gradient(circle, #F7DFAF 0%, rgba(247,223,175,0) 68%); }
         .landing-rise { animation: landing-rise .65s ease-out both; }
         .landing-float { animation: landing-rise .8s .08s ease-out both, landing-float 5s 1s ease-in-out infinite; }
+        .feature-details-open { animation: feature-reveal .28s ease-out both; }
         @keyframes landing-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes landing-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+        @keyframes feature-reveal { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         @media (prefers-reduced-motion: reduce) { .landing-rise, .landing-float { animation: none !important; } }
       `}</style>
     </div>
