@@ -1,0 +1,511 @@
+CUSTOMER ENABLEMENT GUIDE 
+CareChart Configuration and User 
+Guide 
+A plain-language handbook for hospital setup, staff training, and daily operations 
+PREPARED FOR 
+Hospital administrators and authorized staff 
+EDITION 
+Customer edition - August 2026 
+SCOPE 
+CareChart outpatient workflows 
+SCREENSHOTS 
+Demonstration data only; identifiers removed or 
+replaced 
+ 
+Privacy-safe customer edition: The screenshots in this guide are flattened demonstration images. Patient 
+names, MRNs, phone numbers, dates of birth, staff emails, order identifiers, clinical narratives, payment 
+links, and audit identifiers were removed or replaced before the images were embedded. 
+CareChart · Care, connected 
+  
+CareChart Customer Guide  |  Configuration and daily use 
+Page 2 
+Contents 
+Contents ........................................................................................................................................................ 2 
+1. What CareChart does ................................................................................................................................ 4 
+The top navigation .................................................................................................................................... 4 
+2. Sign in, passwords, and the active hospital .............................................................................................. 5 
+Sign in ........................................................................................................................................................ 5 
+Active hospital ........................................................................................................................................... 6 
+3. Roles and access........................................................................................................................................ 6 
+4. Front Desk: find or register a patient ........................................................................................................ 7 
+Find an existing patient ............................................................................................................................. 7 
+Register a new patient .............................................................................................................................. 7 
+5. Appointments and check-in ...................................................................................................................... 9 
+Book from the schedule ............................................................................................................................ 9 
+Online appointment requests ................................................................................................................. 10 
+6. Doctor's Desk and waiting room ............................................................................................................. 11 
+7. Document a clinical visit ......................................................................................................................... 12 
+Complete the consultation ..................................................................................................................... 12 
+Tests, diagnostic orders, and signature .................................................................................................. 13 
+8. Patient Records ....................................................................................................................................... 14 
+9. Hospital and staff administration ........................................................................................................... 15 
+Create a hospital account - Super Admin ............................................................................................... 15 
+Invite or add staff .................................................................................................................................... 15 
+Review active staff .................................................................................................................................. 16 
+10. Billing, invoices, and payments ............................................................................................................. 16 
+Generate and review invoices ................................................................................................................ 16 
+Payments, refunds, print, and void ......................................................................................................... 18 
+11. Diagnostics: collection, report upload, and doctor review ................................................................... 19 
+Lab or radiology team ............................................................................................................................. 19 
+Ordering clinician .................................................................................................................................... 19 
+12. Patient documents ................................................................................................................................ 20 
+CareChart Customer Guide  |  Configuration and daily use 
+Page 3 
+13. Audit history .......................................................................................................................................... 21 
+14. Configure a hospital in the recommended order ................................................................................. 22 
+Step 1 - Locations and departments ....................................................................................................... 22 
+Step 2 - Practitioners and weekly schedules .......................................................................................... 22 
+Step 3 - Blocked time and holidays ......................................................................................................... 23 
+Step 4 - Service catalog, prices, and tax .................................................................................................. 23 
+15. Public booking and patient portal ......................................................................................................... 24 
+Public appointment booking ................................................................................................................... 24 
+Patient portal .......................................................................................................................................... 24 
+16. New hospital setup checklist ................................................................................................................ 25 
+17. Daily workflow checklists ...................................................................................................................... 26 
+Walk-in visit ............................................................................................................................................. 26 
+Online appointment ................................................................................................................................ 26 
+18. Privacy, security, and safe documentation ........................................................................................... 26 
+19. Troubleshooting .................................................................................................................................... 27 
+Information safe to send support ........................................................................................................... 27 
+20. Plain-language glossary ......................................................................................................................... 28 
+ 
+How to use this guide: Administrators should begin with hospital setup and role access. Other staff can go 
+directly to the section matching their daily work. 
+  
+CareChart Customer Guide  |  Configuration and daily use 
+Page 4 
+1. What CareChart does 
+CareChart brings common outpatient hospital tasks into one hospital-scoped workspace. It connects 
+patient registration, appointments, the doctor's queue, clinical documentation, diagnostic orders, 
+patient records, documents, billing, and audit history. 
+ 
+Figure 1. Public landing page with links for booking, patient access, and staff sign-in. 
+The top navigation 
+Area Plain-language purpose 
+Front Desk Find or register patients and start walk-in visits. 
+Schedule Book appointments and check patients in. 
+Doctor's Desk Review requests, open the waiting room, and document visits. 
+Patient Records Search the hospital's patient history. 
+Admin Create hospital accounts, invite staff, and manage roles. 
+Billing Generate invoices and record payments, refunds, and voids. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 5 
+Area Plain-language purpose 
+Diagnostics Start lab/radiology work, upload reports, and track review. 
+Documents Upload approved patient PDFs and images. 
+Audit Review important security and workflow events. 
+Settings Configure clinics, practitioners, schedules, prices, and tax. 
+2. Sign in, passwords, and the active hospital 
+Sign in 
+1. Open the staff sign-in page. 
+2. Enter the email address assigned to your individual account. 
+3. Enter your password and select Sign in. 
+4. If you cannot remember the password, use Forgot password? and follow the approved reset 
+process. 
+ 
+Figure 2. Staff sign-in screen using demonstration credentials. 
+Password rule: A new password must contain at least 8 characters, including at least one letter and one 
+number. Never share a password or use one account for several people. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 6 
+Active hospital 
+The hospital shown at the top of the screen is the active hospital. Data entered or viewed on that screen 
+belongs to that hospital workspace. 
+• Super Admin users can open Active Hospital and switch between hospital accounts they manage. 
+• Other staff see only the hospital or hospitals to which they are assigned. 
+• Always confirm the hospital name before registering a patient, changing settings, or creating an 
+invoice. 
+Important: Changing the active hospital changes the workspace. It does not move patients, visits, staff, 
+invoices, or configuration between hospitals. 
+3. Roles and access 
+CareChart shows only the menus allowed for the signed-in role. An administrator should give each 
+person the smallest role needed for their job. 
+Role Typical access 
+Super Admin All hospital workspaces, hospital creation, active-hospital switching, and all operational 
+areas. 
+Admin / Clinic Admin Hospital administration, settings, records, billing, diagnostics, documents, and audit. 
+Doctor Schedule, Doctor's Desk, records, diagnostics, and documents. 
+Front Desk / Reception Patient registration, schedule, records, billing support, and documents. 
+Nurse Schedule, patient records, and documents. 
+Billing Billing and patient-record lookup needed for finance work. 
+Lab / Radiology Diagnostics, patient-record lookup, and documents needed for report workflows. 
+Patient The separate patient portal connected only to that patient's account. 
+Role changes: Role changes take effect for future access. Remove or suspend access promptly when a 
+person leaves or no longer needs the system. 
+CareChart Customer Guide  |  Configuration and daily use 
+Page 7 
+4. Front Desk: find or register a patient 
+Find an existing patient 
+1. Open Front Desk. 
+2. Search using the MRN, patient name, or phone number. 
+3. Check more than one detail before selecting a result. This helps prevent choosing the wrong person. 
+4. If no correct record exists, select Register new patient. 
+ 
+Figure 3. Front Desk search before a patient is selected. 
+Register a new patient 
+1. Enter the patient's full name exactly as provided. 
+2. Enter date of birth when available; confirm that the calculated age is correct. 
+3. Choose gender and the doctor responsible for the visit. 
+4. Enter phone, email, blood group, emergency contact, and address when collected under hospital 
+policy. 
+5. Add known allergies carefully. Press Enter after each allergy so it is saved as a separate item. 
+6. Review the information with the patient, then select Save patient & continue to visit. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 8 
+ 
+Figure 4. Empty New Patient Registration form. 
+Duplicate prevention: Search before registering. If two records may belong to the same person, stop and 
+ask an administrator to use the approved duplicate-review process. Do not casually delete a patient 
+record. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 9 
+5. Appointments and check-in 
+Book from the schedule 
+1. Open Schedule and choose the required date. 
+2. Select New appointment. 
+3. Search for and select the patient. 
+4. Choose the doctor, time, visit duration, and reason. 
+5. Select Book appointment. 
+6. When the patient arrives, open the appointment and complete check-in so the visit reaches the 
+doctor's queue. 
+ 
+Figure 5. Appointment Schedule showing an empty day. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 10 
+ 
+Figure 6. New appointment form. 
+Online appointment requests 
+• A public request is not a completed visit. It must be reviewed and confirmed by authorized staff. 
+• The doctor or authorized team reviews the requested date and time before confirmation. 
+• After confirmation, Front Desk checks the patient in when they arrive. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 11 
+6. Doctor's Desk and waiting room 
+Doctor's Desk brings together appointment requests, confirmed online appointments, and patients 
+waiting for consultation. 
+1. Review any appointment requests awaiting action. 
+2. Confirm or decline according to the hospital's booking process. 
+3. Open a patient from Waiting Room only when ready to begin the consultation. 
+4. Confirm the patient and visit reason before documenting anything. 
+ 
+Figure 7. Doctor's Desk with a demonstration waiting-room entry. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 12 
+7. Document a clinical visit 
+Complete the consultation 
+1. Confirm the patient header and review any allergy alert before prescribing. 
+2. Read the chief complaint and record measured vital signs. 
+3. Enter examination findings or clinical feedback. 
+4. Record the diagnosis and advice given to the patient. 
+5. Add medicines and tests when clinically appropriate. 
+6. Create a tracked diagnostic order when the lab or radiology team must receive and process the 
+request. 
+7. Save a draft if the visit is not ready. Otherwise confirm the signature checkbox and select Complete 
+& sign visit. 
+ 
+Figure 8. Consultation form using demonstration text only. 
+Clinical responsibility: CareChart records information and displays alerts. It does not replace professional 
+judgement. The signing clinician remains responsible for accuracy, appropriateness, and follow-up. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 13 
+Tests, diagnostic orders, and signature 
+    
+Figure 9. Left: tracked operational diagnostic orders. Right: draft and digital-signature controls. 
+• Tests ordered is a simple clinical list recorded in the visit. 
+• Operational diagnostic orders create work for the Diagnostics team and support report upload and 
+review tracking. 
+• Save draft keeps the visit open. Complete & sign visit finalizes the encounter for downstream 
+records and billing. 
+• A correction after signing should follow the approved amendment process so the original remains 
+traceable. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 14 
+8. Patient Records 
+1. Open Patient Records. 
+2. Search by MRN, patient name, or phone number. 
+3. Select the correct patient after verifying more than one identifier. 
+4. Review permitted demographics, allergies, previous visits, diagnoses, medicines, tests, documents, 
+and signed information. 
+ 
+Figure 10. Patient Records list using demonstration identities. 
+Minimum necessary access: Open a patient record only when it is needed for your assigned work. 
+Searching or viewing a record can be recorded in the audit history. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 15 
+9. Hospital and staff administration 
+Create a hospital account - Super Admin 
+1. Open Admin and confirm the active hospital shown in the header. 
+2. Under Create Hospital Account, enter the hospital or clinic name. 
+3. Enter the first administrator's name and email. 
+4. Set a temporary password that follows the password rule. 
+5. Select Create hospital. 
+6. Open Active Hospital and switch into the new hospital before configuring it. 
+ 
+Figure 11. Admin page for hospital creation, staff invitations, and user management. 
+Invite or add staff 
+• Invite by email when the person should create their own password through the approved invitation 
+process. 
+• Add user manually only when the hospital's onboarding process requires an administrator-created 
+account. 
+• Choose the role carefully. The role controls which menus and records the person can access. 
+• Administrator email and password fields should be entered manually; they must not copy the 
+signed-in user's credentials automatically. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 16 
+Review active staff 
+ 
+Figure 12. Active staff list using demonstration names and emails. 
+1. Review active staff regularly. 
+2. Change a role only after confirming the person's current duties. 
+3. Use Remove when access should end, following the hospital's offboarding policy. 
+4. Never reuse a former employee's account for a new employee. 
+10. Billing, invoices, and payments 
+Generate and review invoices 
+1. Complete and sign the clinical visit. 
+2. Open Billing and choose the completed visit or invoice. 
+3. Review the patient, invoice status, date, line items, unit price, discount, tax, and total. 
+4. If a price is zero unexpectedly, stop before collecting money and configure the matching service 
+price under Settings. 
+5. Save changes only after the invoice is correct. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 17 
+ 
+Figure 13. Billing list using demonstration patients and dates. 
+ 
+Figure 14. Demonstration invoice with one consultation line. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 18 
+Payments, refunds, print, and void 
+ 
+Figure 15. Demonstration payment and refund section. 
+• Record payment: enter the amount, method, and optional reference used by the hospital. 
+• Partial payment: the invoice remains partly unpaid until the balance is collected. 
+• Refund: enter the refund amount and a clear reason; the original payment remains traceable. 
+• Void invoice: use only when the invoice should be cancelled. A reason is required. 
+• Print: produce a customer-facing invoice copy through the approved printing process. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 19 
+11. Diagnostics: collection, report upload, and doctor review 
+Lab or radiology team 
+1. Open Diagnostics and filter by type or status when needed. 
+2. For a blood test, begin the collection process when the sample is actually received. For imaging, 
+begin processing according to the department workflow. 
+3. Complete the test or imaging work in the hospital's approved laboratory or radiology system. 
+4. When the final report is ready, attach the approved PDF, JPEG, or PNG file to the in-progress order. 
+5. Select Upload report & send to doctor. The order becomes ready for clinical review. 
+ 
+Figure 16. Diagnostics page using fictional orders, patient, clinician, and report name. 
+Ordering clinician 
+1. Open the completed order. 
+2. Open and read the attached report. 
+3. When clinically satisfied, acknowledge the report using the available review control. 
+4. Arrange any required patient follow-up outside the status change itself. 
+Status meaning: Completed means a report was uploaded. Reviewed means an authorized clinician 
+opened and acknowledged it. A status is not a substitute for reading the report. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 20 
+12. Patient documents 
+1. Open Documents. 
+2. Search for the patient and verify the correct record. 
+3. Choose an approved PDF, JPEG, or PNG file. 
+4. Link it to a diagnostic order when the document is the final report for that order; otherwise keep it 
+as a general patient document. 
+5. Select Upload securely. 
+6. Authorized staff can later open or download the document within the same hospital workspace. 
+ 
+Figure 17. Patient Documents search screen. 
+Before uploading: Confirm the patient, document type, and hospital. Do not upload unrelated files, 
+passwords, exports containing multiple patients, or documents not approved by hospital policy. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 21 
+13. Audit history 
+Audit history is an append-only record of important security and workflow events for the active hospital. 
+It can show the time, action, resource, user or system identifier, and reason when one was supplied. 
+ 
+Figure 18. Audit history using demonstration timestamps and identifiers. 
+• Use audit history for authorized operational, privacy, security, and support reviews. 
+• Do not put passwords, tokens, or unnecessary clinical details into an audit reason. 
+• An audit event shows that an action occurred; it does not by itself explain whether the action was 
+clinically appropriate. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 22 
+14. Configure a hospital in the recommended order 
+Start here: Switch to the correct active hospital before every configuration step. Configuration belongs 
+only to that hospital workspace. 
+Step 1 - Locations and departments 
+1. Open Settings. 
+2. Enter the clinic name, a unique clinic code, address, and IANA timezone such as Asia/Kolkata. 
+3. Select Add clinic. 
+4. Choose the clinic, select Department, enter the department name, and add the configuration. 
+5. Repeat for each real care location and department. 
+ 
+Figure 19. Clinic, location, and department configuration. 
+Step 2 - Practitioners and weekly schedules 
+1. Select the doctor account and the clinic where the doctor works. 
+2. Choose the department and enter specialty, qualification, and registration number when required. 
+3. Select Save practitioner. 
+4. Choose the practitioner and weekday, then enter start time, end time, and slot length. 
+5. Add a break only when both break start and break end are entered. 
+6. Select Save Weekly Schedule. Saving the same practitioner and weekday updates the existing entry 
+instead of creating a duplicate. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 23 
+ 
+Figure 20. Practitioner profile and weekly schedule configuration. 
+Step 3 - Blocked time and holidays 
+• Blocked practitioner time is for leave, meetings, or another period when one practitioner is 
+unavailable. 
+• Clinic holiday is for a date when the selected clinic is closed. 
+• Enter a clear reason or holiday name so staff understand why slots are unavailable. 
+Step 4 - Service catalog, prices, and tax 
+1. Choose the clinic. 
+2. Enter a stable service code and service name that match how the service will appear on invoices. 
+3. Choose the category, such as Consultation, Medicine, Test, or Imaging. 
+4. Enter the clinic price. Mark Taxable service only when approved by the hospital's finance process. 
+5. Select Save service and price. 
+6. If tax applies, choose the clinic, enter the tax name and rate, set the effective date, and add the tax 
+rule. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 24 
+ 
+Figure 21. Blocked time, holidays, service pricing, and tax configuration. 
+Why prices matter: Invoice prices are populated by matching visit items to the active clinic's service 
+catalog. A missing or mismatched service can leave the invoice price at zero. 
+15. Public booking and patient portal 
+Public appointment booking 
+• The public page can link a patient to the appointment request form. 
+• The patient chooses an available hospital, clinic, doctor, date, and time according to the deployed 
+booking workflow. 
+• A request enters the review queue and becomes confirmed only after authorized review. 
+Patient portal 
+• The patient uses the separate patient portal entry point, not the staff sign-in form. 
+• Activation must follow the hospital's identity-verification process. 
+
+CareChart Customer Guide  |  Configuration and daily use 
+Page 25 
+• A portal user should see only the patient record connected to that portal account. 
+• Staff must verify the patient's email and identity before sending or renewing access. 
+16. New hospital setup checklist 
+• Hospital account created and selected as the active hospital 
+• Clinic locations, codes, addresses, and timezones entered 
+• Departments and appointment types created 
+• Doctor accounts linked to practitioner profiles 
+• Every working weekday, slot length, and optional break checked 
+• Planned leave, blocked periods, and clinic holidays entered 
+• Common consultations, medicines, tests, and imaging services priced for each clinic 
+• Tax rules reviewed and approved by the hospital's finance owner 
+• Staff invited with the smallest role required 
+• Email delivery, document storage, encryption, malware scanning, backups, and HTTPS tested 
+• A complete fictional-patient workflow tested before entering real patient information 
+Go-live approval: Technical availability does not replace hospital approval. Clinical, operational, privacy, 
+legal, security, and finance owners should approve the configured workflow before real use. 
+CareChart Customer Guide  |  Configuration and daily use 
+Page 26 
+17. Daily workflow checklists 
+Walk-in visit 
+1. Front Desk searches for or registers the patient. 
+2. Front Desk logs the visit and selects the doctor. 
+3. Doctor opens the patient from Waiting Room. 
+4. Doctor documents, orders, and signs the visit. 
+5. Lab or radiology processes any tracked order and uploads the final report. 
+6. Ordering clinician reviews and acknowledges the report. 
+7. Billing reviews prices, generates the invoice, and records payment. 
+Online appointment 
+1. Patient submits a public appointment request. 
+2. Authorized staff or doctor reviews and confirms it. 
+3. Front Desk checks the patient in on arrival. 
+4. Clinical, diagnostic, record, and billing steps follow the same controlled workflow as a walk-in visit. 
+18. Privacy, security, and safe documentation 
+• Use an individual account. Never share passwords or leave a signed-in device unattended. 
+• Confirm the active hospital and patient before viewing, entering, uploading, printing, or billing 
+information. 
+• Access only the minimum information needed for assigned work. 
+• Do not include patient information in training material, sales documents, screenshots, support 
+messages, or presentations unless formally approved and securely de-identified. 
+• Use fictional identities for demonstrations. A common-looking name is not automatically de-
+identified. 
+• Remove staff emails, internal IDs, tokens, and environment details from customer-facing 
+screenshots. 
+• Use approved storage, encryption, malware scanning, backups, HTTPS, access review, incident 
+response, and retention procedures. 
+• Follow applicable hospital policy and legal/regulatory requirements for the country and care setting. 
+Screenshot rule: A customer guide should contain only screenshots that were deliberately prepared for 
+demonstration. Cropping is not enough when the original file still contains hidden or out-of-frame 
+sensitive pixels; use a flattened sanitized copy. 
+CareChart Customer Guide  |  Configuration and daily use 
+Page 27 
+19. Troubleshooting 
+Problem What to check 
+Wrong hospital is shown Super Admin: open Active Hospital and switch. Other staff: confirm assignment to 
+the correct hospital. 
+A menu is missing Check the signed-in role. CareChart hides functions that are outside the role's 
+access. 
+Patient is not found Confirm the active hospital and search using another approved identifier. Do not 
+create a duplicate without checking. 
+Doctor is missing from 
+scheduling Confirm an active doctor account is linked to a practitioner profile and clinic. 
+No appointment slots appear Check weekday schedule, slot length, breaks, blocked time, holidays, and existing 
+appointments. 
+Same weekday appears twice Save the same practitioner and weekday again to update it. Ask support to review 
+older duplicate data if it remains. 
+Password is rejected Use at least 8 characters with at least one letter and one number. 
+Invoice price is zero Create or correct the active service and clinic price in Settings, then follow the 
+approved invoice-correction process. 
+Report cannot be uploaded Confirm the order is in progress and the file is an approved PDF, JPEG, or PNG 
+within the configured size limit. 
+Doctor cannot acknowledge 
+report 
+Confirm the report is completed and the user is the ordering clinician or an 
+authorized administrator. 
+Page remains on Loading Refresh once. If application assets return errors, contact the 
+implementation/support team with the page and time. 
+Information safe to send support 
+• Page name and approximate time of the issue 
+• Your role and the hospital name shown in the header 
+• The non-sensitive error message 
+• Steps that led to the issue and whether it remains after a refresh 
+• A screenshot only after patient information, credentials, tokens, emails, IDs, and internal URLs are 
+removed 
+CareChart Customer Guide  |  Configuration and daily use 
+Page 28 
+20. Plain-language glossary 
+Term Meaning 
+Active hospital The hospital workspace currently selected at the top of the screen. 
+Appointment type A named kind of visit with a standard duration. 
+Audit event A time-stamped record that an important action happened. 
+Clinical indication The reason a test or imaging procedure is requested. 
+Completed diagnostic 
+order A final report was uploaded and is waiting for clinical review. 
+Department A care grouping inside a clinic, such as General Medicine or Pediatrics. 
+Encounter / visit The clinical record for one patient attendance or consultation. 
+IANA timezone A standard location-based timezone name, such as Asia/Kolkata. 
+MRN Medical Record Number - the patient's identifier inside one hospital. 
+Organization The hospital-level workspace that separates one customer's data from another's. 
+Practitioner profile The configuration linking a clinician account to clinic, department, and scheduling details. 
+Reviewed diagnostic 
+order An authorized clinician opened and acknowledged the uploaded report. 
+Service catalog The hospital's list of billable services and clinic prices. 
+Tenant scoped Restricted to one hospital workspace rather than shared across hospitals. 
+Guide maintenance: Update this handbook whenever screens, roles, workflows, password rules, or 
+integrations change. Recreate customer screenshots with fictional demonstration data and repeat the 
+privacy review before distribution. 
+ 
