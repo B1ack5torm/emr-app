@@ -16,4 +16,6 @@ test("route guards and landing redirects use the same portal areas", () => {
   assert.equal(defaultPortalPath("DOCTOR"), "/doctor");
   assert.equal(defaultPortalPath("CLINIC_ADMIN"), "/admin");
   assert.equal(defaultPortalPath("LAB_RADIOLOGY"), "/diagnostics");
+  assert.equal(defaultPortalPath("NURSE"), "/frontdesk");
+  assert.equal(roleCanAccessArea("NURSE", "frontdesk"), true);
 });

@@ -4,7 +4,7 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, CalendarDays, FlaskConical, FolderOpen, History, Settings, Building2, Check, ChevronDown, LoaderCircle } from "lucide-react";
+import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, FlaskConical, FolderOpen, History, Settings, Building2, Check, ChevronDown, LoaderCircle } from "lucide-react";
 import { PortalArea, roleCanAccessArea } from "@/lib/portal-access";
 
 export default function NavBar() {
@@ -59,7 +59,6 @@ export default function NavBar() {
 
   const tabs: { area: PortalArea; href: string; label: string; icon: React.ReactNode }[] = [
     { area: "frontdesk", href: "/frontdesk", label: "Front Desk", icon: <ClipboardList size={15} /> },
-    { area: "appointments", href: "/appointments", label: "Schedule", icon: <CalendarDays size={15} /> },
     { area: "doctor", href: "/doctor", label: "Doctor's Desk", icon: <Stethoscope size={15} /> },
     { area: "records", href: "/records", label: "Patient Records", icon: <FileText size={15} /> },
     { area: "admin", href: "/admin", label: "Admin", icon: <ShieldCheck size={15} /> },

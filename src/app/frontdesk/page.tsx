@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, X, AlertTriangle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Search, Plus, X, AlertTriangle, ArrowLeft, CheckCircle2, UserRoundPlus } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
+import FrontDeskSchedule from "@/components/FrontDeskSchedule";
 
 type Patient = {
   id: string; mrn: string; name: string; age: number; gender: string; phone?: string;
@@ -41,31 +42,48 @@ export default function FrontDeskPage() {
   if (mode === "visit" && selected) return <StartVisit patient={selected} doctorId={selectedDoctorId} onDone={() => { setSaved(true); setTimeout(() => { setSaved(false); setMode("search"); setSelected(null); setSelectedDoctorId(""); setQuery(""); }, 1400); }} onBack={() => setMode("search")} />;
 
   return (
-    <div className="grid grid-cols-[340px_1fr] gap-5">
-      <div className="flex flex-col gap-3">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-3 text-inkSoft" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by MRN, name, or phone"
-            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-[#FCFAF5]" />
-        </div>
-        <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
-          {results.map((p) => (
-            <div key={p.id} onClick={() => { setSelected(p); setMode("visit"); }}
-              className="cursor-pointer p-3 rounded-lg bg-card border border-border"
-              style={{ borderLeft: `4px solid ${p.allergies.length ? "#B5533C" : "#3D6A5C"}` }}>
-              <div className="font-semibold text-sm">{p.name}</div>
-              <div className="text-xs font-mono text-inkSoft">{p.mrn}</div>
-              <div className="text-xs text-inkSoft">{p.age} yrs · {p.gender} · {p.phone || "no phone on file"}</div>
-            </div>
-          ))}
-          {query && results.length === 0 && <div className="text-sm text-inkSoft">No matching patient found.</div>}
-        </div>
-        <button onClick={() => setMode("new")} className="flex items-center justify-center gap-2 bg-accent text-white rounded-lg py-2.5 font-semibold text-sm">
-          <Plus size={15} /> Register new patient
-        </button>
+    <div className="w-full">
+      <div className="mb-6">
+        <h1 className="font-serif text-2xl font-semibold">Front desk workspace</h1>
+        <p className="mt-1 text-sm text-inkSoft">Manage today&apos;s appointments, check patients in, and register walk-ins from one place.</p>
       </div>
-      <div className="flex items-center justify-center text-inkSoft border border-dashed border-border rounded-xl min-h-[300px] text-center p-6">
-        Search for a returning patient, or register a new one, to log today&apos;s visit.
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,.65fr)]">
+        <FrontDeskSchedule />
+
+        <aside className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accentSoft text-accentDark"><UserRoundPlus size={19} /></span>
+            <div><h2 className="font-serif text-lg font-semibold">Patient arrival</h2><p className="mt-0.5 text-xs leading-5 text-inkSoft">Find a returning patient or register a walk-in, then send them to the doctor&apos;s queue.</p></div>
+          </div>
+
+          <div className="relative mt-5">
+            <Search size={15} className="pointer-events-none absolute left-3 top-3 text-inkSoft" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search MRN, name, or phone" className="w-full rounded-lg border border-border bg-[#FCFAF5] py-2.5 pl-9 pr-3" />
+          </div>
+
+          <div className="mt-3 flex max-h-80 flex-col gap-2 overflow-y-auto">
+            {results.map((patient) => (
+              <button key={patient.id} type="button" onClick={() => { setSelected(patient); setMode("visit"); }} className="rounded-lg border border-border bg-white p-3 text-left transition hover:border-accent/50 hover:shadow-sm" style={{ borderLeft: `4px solid ${patient.allergies.length ? "#B5533C" : "#3D6A5C"}` }}>
+                <div className="text-sm font-semibold">{patient.name}</div>
+                <div className="font-mono text-xs text-inkSoft">{patient.mrn}</div>
+                <div className="text-xs text-inkSoft">{patient.age} yrs · {patient.gender} · {patient.phone || "no phone on file"}</div>
+              </button>
+            ))}
+            {query && results.length === 0 && <div className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-inkSoft">No matching patient found.</div>}
+          </div>
+
+          <button onClick={() => setMode("new")} className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-semibold text-white"><Plus size={15} /> Register walk-in patient</button>
+
+          <div className="mt-5 border-t border-border pt-4">
+            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-inkSoft">Walk-in flow</p>
+            <ol className="mt-3 space-y-2 text-xs text-inkSoft">
+              <li><b className="text-ink">1.</b> Find or register the patient</li>
+              <li><b className="text-ink">2.</b> Select a doctor and capture visit details</li>
+              <li><b className="text-ink">3.</b> Add the patient to the live doctor queue</li>
+            </ol>
+          </div>
+        </aside>
       </div>
     </div>
   );

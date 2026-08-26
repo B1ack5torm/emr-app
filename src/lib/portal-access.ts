@@ -11,7 +11,7 @@ export type PortalArea =
   | "settings";
 
 const rolesByArea: Record<PortalArea, readonly string[]> = {
-  frontdesk: ["RECEPTION", "FRONT_DESK", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
+  frontdesk: ["RECEPTION", "FRONT_DESK", "NURSE", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
   appointments: ["RECEPTION", "FRONT_DESK", "NURSE", "DOCTOR", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
   doctor: ["DOCTOR", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
   records: ["RECEPTION", "FRONT_DESK", "NURSE", "DOCTOR", "BILLING", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
@@ -36,7 +36,7 @@ export function defaultPortalPath(role: string | null | undefined) {
   if (["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"].includes(role || "")) return "/admin";
   if (role === "DOCTOR") return "/doctor";
   if (["RECEPTION", "FRONT_DESK"].includes(role || "")) return "/frontdesk";
-  if (role === "NURSE") return "/appointments";
+  if (role === "NURSE") return "/frontdesk";
   if (role === "BILLING") return "/billing";
   if (role === "LAB_RADIOLOGY") return "/diagnostics";
   return "/records";
