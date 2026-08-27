@@ -140,7 +140,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
   };
 
   return (
-    <form onSubmit={submit} className="bg-card border border-border rounded-xl p-6 max-w-2xl">
+    <form onSubmit={submit} className="mx-auto w-full max-w-2xl rounded-xl border border-border bg-card p-6">
       <div className="flex justify-between items-center mb-4">
         <div className="font-serif text-lg font-semibold">New Patient Registration</div>
         <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back</button>
@@ -210,7 +210,7 @@ function StartVisit({ patient, doctorId: initialDoctorId, onDone, onBack }: { pa
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl p-6 max-w-2xl">
+    <div className="mx-auto w-full max-w-2xl rounded-xl border border-border bg-card p-6">
       <div className="flex justify-between items-center mb-3">
         <div>
           <div className="font-serif text-lg font-semibold">{patient.name}</div>
