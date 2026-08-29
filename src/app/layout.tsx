@@ -5,6 +5,9 @@ import NavBar from "@/components/NavBar";
 export const metadata = {
   title: "CareChart — Electronic Medical Record",
   description: "Multi-organization electronic medical record system",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

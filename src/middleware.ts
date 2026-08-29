@@ -27,7 +27,15 @@ export default withAuth(
     }
     return NextResponse.next();
   },
-  { callbacks: { authorized: ({ token, req }) => req.nextUrl.pathname === "/" || req.nextUrl.pathname.startsWith("/patient") || (!!token && token.accountActive !== false) } }
+  {
+    pages: { signIn: "/" },
+    callbacks: {
+      authorized: ({ token, req }) =>
+        req.nextUrl.pathname === "/" ||
+        req.nextUrl.pathname.startsWith("/patient") ||
+        (!!token && token.accountActive !== false),
+    },
+  }
 );
 
 export const config = {

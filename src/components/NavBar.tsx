@@ -134,7 +134,7 @@ export default function NavBar() {
               </div>
             )}
             <span className="text-inkSoft">{session.user?.name} · {role}</span>
-            <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex items-center gap-1 text-alert font-semibold">
+            <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-1 text-alert font-semibold">
               <LogOut size={14} /> Sign out
             </button>
           </div>
