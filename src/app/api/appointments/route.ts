@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       orderBy: { scheduledAt: "asc" },
     }),
     prisma.appointmentRequest.findMany({
-      where: { organizationId, status: { in: ["CONFIRMED", "CHECKED_IN"] }, requestedAt: { gte: start, lt: end } },
+      where: { organizationId, status: { in: ["CONFIRMED", "CHECKED_IN", "CANCELLED", "NO_SHOW"] }, requestedAt: { gte: start, lt: end } },
       include: { doctor: { select: { id: true, name: true } } },
       orderBy: { requestedAt: "asc" },
     }),
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       scheduledAt: appointment.requestedAt,
       durationMinutes: appointment.durationMinutes,
       reason: appointment.reason,
+      statusReason: appointment.statusReason,
       status: appointment.status,
       source: "ONLINE" as const,
       patient: { id: "", name: appointment.patientName, mrn: "Online request", phone: appointment.patientPhone, email: appointment.patientEmail },

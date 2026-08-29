@@ -11,11 +11,9 @@ export async function GET() {
   if (access.response) return access.response;
   const user = access.user as any;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const requests = await prisma.appointmentRequest.findMany({
     where: {
-      OR: [{ status: "PENDING" }, { status: "CONFIRMED", requestedAt: { gte: today } }],
+      status: "PENDING",
       ...(user.role === "DOCTOR" ? { doctorId: user.id, organizationId: user.organizationId } : { organizationId: user.organizationId }),
     },
     include: { doctor: { select: { id: true, name: true } } },

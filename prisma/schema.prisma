@@ -126,6 +126,8 @@ enum AppointmentRequestStatus {
   PENDING
   CONFIRMED
   CHECKED_IN
+  CANCELLED
+  NO_SHOW
   REJECTED
 }
 
@@ -820,6 +822,7 @@ model AppointmentRequest {
   requestedAt       DateTime
   durationMinutes   Int                      @default(30)
   status            AppointmentRequestStatus @default(PENDING)
+  statusReason      String?
   createdAt         DateTime                 @default(now())
   respondedAt       DateTime?
   organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)

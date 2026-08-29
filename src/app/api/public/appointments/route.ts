@@ -67,7 +67,25 @@ export async function POST(req: NextRequest) {
       const hasConflict = appointments.some((item) => slotsOverlap(startsAt, durationMinutes, item.scheduledAt, item.durationMinutes)) || requests.some((item) => slotsOverlap(startsAt, durationMinutes, item.requestedAt, item.durationMinutes));
       if (hasConflict) throw new Error("SLOT_TAKEN");
       const bookingReference = `CC-${new Date().getUTCFullYear()}-${randomBytes(5).toString("hex").toUpperCase()}`;
-      return tx.appointmentRequest.create({ data: { doctorId, organizationId, clinicId: doctor.practitionerProfile?.clinicId || null, appointmentTypeId: appointmentType?.id || null, patientName, patientEmail, patientPhone, reason: String(reason || "").trim().slice(0, 500) || null, requestedAt: startsAt, durationMinutes, bookingReference, idempotencyKey, privacyAcceptedAt: new Date() } });
+      return tx.appointmentRequest.create({
+        data: {
+          doctorId,
+          organizationId,
+          clinicId: doctor.practitionerProfile?.clinicId || null,
+          appointmentTypeId: appointmentType?.id || null,
+          patientName,
+          patientEmail,
+          patientPhone,
+          reason: String(reason || "").trim().slice(0, 500) || null,
+          requestedAt: startsAt,
+          durationMinutes,
+          status: "CONFIRMED",
+          respondedAt: new Date(),
+          bookingReference,
+          idempotencyKey,
+          privacyAcceptedAt: new Date(),
+        },
+      });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     return NextResponse.json({ bookingReference: request.bookingReference, status: request.status }, { status: 201 });
   } catch (error) {

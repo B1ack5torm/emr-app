@@ -65,7 +65,7 @@ export default function PublicAppointmentPage() {
         body: JSON.stringify({ ...visitor, doctorId, organizationId: doctor.organizationId, appointmentTypeId: appointmentTypeId || undefined, date, time, privacyAccepted }),
       });
       const data = await response.json();
-      if (!response.ok) { if (response.status === 409) setTime(""); throw new Error(data.error || "Could not send the appointment request."); }
+      if (!response.ok) { if (response.status === 409) setTime(""); throw new Error(data.error || "Could not confirm the appointment."); }
       setComplete({ doctor, date, time, bookingReference: data.bookingReference });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not send the appointment request.");
@@ -106,7 +106,7 @@ export default function PublicAppointmentPage() {
 }
 
 function Success({ complete }: { complete: Confirmation }) {
-  return <div className="mx-auto mt-16 max-w-lg rounded-2xl border border-[#CFE0D8] bg-white p-8 text-center shadow-xl shadow-[#214F43]/10"><CheckCircle2 size={48} className="mx-auto text-[#24705D]" /><h1 className="mt-5 font-serif text-3xl font-bold">Request sent</h1><p className="mt-3 text-[#60776E]">Your request was sent to <b>Dr. {complete.doctor.name}</b> at <b>{complete.doctor.organization.name}</b>.</p><div className="mx-auto mt-6 max-w-sm rounded-xl bg-[#EAF4EE] p-4"><p className="font-bold">{new Date(`${complete.date}T${complete.time}:00`).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}</p><p className="mt-2 font-mono text-sm font-bold">Reference: {complete.bookingReference}</p><p className="mt-1 text-xs text-[#60776E]">This time is reserved while the doctor reviews your request.</p></div><p className="mt-5 text-sm text-[#60776E]">You will receive an email after the doctor confirms the appointment.</p><Link href="/" className="mt-7 inline-block rounded-lg bg-[#24705D] px-5 py-2.5 text-sm font-bold text-white">Return home</Link></div>;
+  return <div className="mx-auto mt-16 max-w-lg rounded-2xl border border-[#CFE0D8] bg-white p-8 text-center shadow-xl shadow-[#214F43]/10"><CheckCircle2 size={48} className="mx-auto text-[#24705D]" /><h1 className="mt-5 font-serif text-3xl font-bold">Appointment confirmed</h1><p className="mt-3 text-[#60776E]">Your appointment with <b>Dr. {complete.doctor.name}</b> at <b>{complete.doctor.organization.name}</b> is confirmed.</p><div className="mx-auto mt-6 max-w-sm rounded-xl bg-[#EAF4EE] p-4"><p className="font-bold">{new Date(`${complete.date}T${complete.time}:00`).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}</p><p className="mt-2 font-mono text-sm font-bold">Reference: {complete.bookingReference}</p><p className="mt-1 text-xs text-[#60776E]">Please arrive a little early so reception can verify your details and check you in.</p></div><p className="mt-5 text-sm text-[#60776E]">Your appointment is now visible to the reception team.</p><Link href="/" className="mt-7 inline-block rounded-lg bg-[#24705D] px-5 py-2.5 text-sm font-bold text-white">Return home</Link></div>;
 }
 
 function Field({ label, full, children }: { label: string; full?: boolean; children: React.ReactNode }) {

@@ -7,9 +7,21 @@ import { F } from "@/components/shared";
 type Patient = { id: string; name: string; mrn: string; phone?: string; email?: string };
 type AppointmentType = { id: string; name: string; durationMinutes: number };
 type Doctor = { id: string; name: string; practitionerProfile?: { specialty: string; clinic: { id: string; name: string; appointmentTypes: AppointmentType[] } } };
-type Appointment = { id: string; scheduledAt: string; durationMinutes: number; reason?: string; status: "SCHEDULED" | "CHECKED_IN" | "CANCELLED" | "CONFIRMED" | "IN_CONSULTATION" | "COMPLETED" | "NO_SHOW" | "RESCHEDULED"; source: "INTERNAL" | "ONLINE"; patient: Patient; doctor?: Doctor };
+type Appointment = { id: string; scheduledAt: string; durationMinutes: number; reason?: string; statusReason?: string; status: "SCHEDULED" | "CHECKED_IN" | "CANCELLED" | "CONFIRMED" | "IN_CONSULTATION" | "COMPLETED" | "NO_SHOW" | "RESCHEDULED"; source: "INTERNAL" | "ONLINE"; patient: Patient; doctor?: Doctor };
+type VitalInput = { heightCm: string; weightKg: string; bloodPressure: string; temperatureC: string; pulseBpm: string; respiratoryRate: string; oxygenSaturation: string };
 
 const today = () => new Date().toLocaleDateString("en-CA");
+
+function calculateAge(dateOfBirth: string) {
+  if (!dateOfBirth) return null;
+  const birthDate = new Date(`${dateOfBirth}T12:00:00`);
+  if (Number.isNaN(birthDate.getTime()) || birthDate > new Date()) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const monthDifference = now.getMonth() - birthDate.getMonth();
+  if (monthDifference < 0 || (monthDifference === 0 && now.getDate() < birthDate.getDate())) age -= 1;
+  return age;
+}
 
 export default function FrontDeskSchedule() {
   const [date, setDate] = useState(today());
@@ -36,21 +48,36 @@ export default function FrontDeskSchedule() {
     setDate(nextDate.toLocaleDateString("en-CA"));
   };
 
-  const update = async (id: string, action: "check-in" | "cancel") => {
+  const update = async (id: string, action: "check-in" | "cancel" | "no-show") => {
     setError(""); setNotice("");
-    const reason = action === "cancel" ? window.prompt("Enter the cancellation reason:")?.trim() : undefined;
+    const reason = action === "cancel" ? window.prompt("Confirm the doctor is unavailable and add a cancellation note:", "Doctor unavailable")?.trim() : undefined;
     if (action === "cancel" && !reason) return;
+    if (action === "no-show" && !window.confirm("Mark this patient as a no-show?")) return;
     const response = await fetch(`/api/appointments/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
     const data = await response.json();
     if (!response.ok) return setError(data.error || "Could not update appointment.");
     if (action === "check-in") setNotice("Patient checked in and added to the doctor’s queue.");
+    if (action === "no-show") setNotice("Appointment marked as no-show.");
+    if (action === "cancel") setNotice("Appointment cancelled because the doctor is unavailable.");
     await load();
   };
 
-  const checkInOnline = async (age: string, gender: string) => {
+  const updateOnline = async (appointment: Appointment, action: "cancel" | "no-show") => {
+    setError(""); setNotice("");
+    const reason = action === "cancel" ? window.prompt("Confirm the doctor is unavailable and add a cancellation note:", "Doctor unavailable")?.trim() : undefined;
+    if (action === "cancel" && !reason) return;
+    if (action === "no-show" && !window.confirm("Mark this patient as a no-show?")) return;
+    const response = await fetch(`/api/appointments/online/${appointment.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
+    const data = await response.json();
+    if (!response.ok) return setError(data.error || "Could not update appointment.");
+    setNotice(action === "no-show" ? "Appointment marked as no-show." : "Appointment cancelled because the doctor is unavailable.");
+    await load();
+  };
+
+  const checkInOnline = async (dateOfBirth: string, gender: string, vital: VitalInput) => {
     if (!onlineCheckIn) return;
     setError("");
-    const response = await fetch(`/api/appointments/online/${onlineCheckIn.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ age, gender }) });
+    const response = await fetch(`/api/appointments/online/${onlineCheckIn.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check-in", dateOfBirth, gender, vital }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not check in this patient.");
     setOnlineCheckIn(null);
@@ -65,7 +92,7 @@ export default function FrontDeskSchedule() {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2"><CalendarDays size={18} className="text-accentDark" /><h2 className="font-serif text-xl font-semibold">{isToday ? "Today’s appointment schedule" : "Appointment schedule"}</h2></div>
-          <p className="mt-1 text-sm text-inkSoft">Check patients in and move them directly to the doctor&apos;s queue.</p>
+          <p className="mt-1 text-sm text-inkSoft">Verify arrivals, check patients in, or record no-shows and doctor-unavailable cancellations.</p>
         </div>
         <button onClick={() => { setError(""); setNotice(""); setShowForm(true); }} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white"><Plus size={16} /> New appointment</button>
       </div>
@@ -83,11 +110,11 @@ export default function FrontDeskSchedule() {
           <button aria-label="Next day" onClick={() => changeDay(1)} className="rounded-md p-2 hover:bg-accentSoft"><ChevronRight size={17} /></button>
         </div>
         {appointments.length === 0 ? <div className="px-6 py-12 text-center text-sm text-inkSoft">No appointments scheduled for this day.</div> : <div className="divide-y divide-border">
-          {appointments.map((appointment) => <div key={appointment.id} className={`flex flex-wrap items-center gap-4 p-4 ${appointment.status === "CANCELLED" ? "opacity-50" : ""}`}>
+          {appointments.map((appointment) => <div key={appointment.id} className={`flex flex-wrap items-center gap-4 p-4 ${["CANCELLED", "NO_SHOW"].includes(appointment.status) ? "opacity-50" : ""}`}>
             <div className="w-20 text-sm font-mono font-semibold">{new Date(appointment.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-            <div className="min-w-[180px] flex-1"><div className="flex flex-wrap items-center gap-2 text-sm font-semibold"><span>{appointment.patient.name}</span><span className="font-mono text-xs font-normal text-inkSoft">{appointment.patient.mrn}</span>{appointment.source === "ONLINE" && <span className="rounded-full bg-waitingSoft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-waiting">Online</span>}</div><div className="mt-0.5 text-xs text-inkSoft">{appointment.reason || "No reason noted"}</div></div>
+            <div className="min-w-[180px] flex-1"><div className="flex flex-wrap items-center gap-2 text-sm font-semibold"><span>{appointment.patient.name}</span><span className="font-mono text-xs font-normal text-inkSoft">{appointment.patient.mrn}</span>{appointment.source === "ONLINE" && <span className="rounded-full bg-waitingSoft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-waiting">Online</span>}</div><div className="mt-0.5 text-xs text-inkSoft">{appointment.statusReason || appointment.reason || "No reason noted"}</div></div>
             <div className="min-w-[130px] text-sm text-inkSoft">{appointment.doctor?.name || "Unassigned"} · {appointment.durationMinutes} min</div>
-            <div className="flex items-center gap-2">{appointment.status === "SCHEDULED" ? <><button onClick={() => void update(appointment.id, "check-in")} className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-sm font-semibold text-accentDark"><CheckCircle2 size={14} /> Check in</button><button aria-label="Cancel appointment" onClick={() => void update(appointment.id, "cancel")} className="p-1.5 text-alert"><X size={16} /></button></> : appointment.status === "CONFIRMED" && appointment.source === "ONLINE" ? <button onClick={() => setOnlineCheckIn(appointment)} className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accentDark"><CheckCircle2 size={14} /> Check in</button> : <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${appointment.status === "CHECKED_IN" || appointment.status === "CONFIRMED" ? "bg-accentSoft text-accentDark" : "bg-[#eee9df] text-inkSoft"}`}>{appointment.status === "CHECKED_IN" ? "In queue" : appointment.status === "CONFIRMED" ? "Confirmed" : appointment.status.replaceAll("_", " ")}</span>}</div>
+            <div className="flex flex-wrap items-center gap-2">{appointment.status === "SCHEDULED" ? <><button onClick={() => void update(appointment.id, "check-in")} className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-sm font-semibold text-accentDark"><CheckCircle2 size={14} /> Check in</button><button onClick={() => void update(appointment.id, "no-show")} className="rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-inkSoft">No-show</button><button onClick={() => void update(appointment.id, "cancel")} className="rounded-md border border-alertSoft px-2.5 py-1.5 text-xs font-semibold text-alert">Doctor unavailable</button></> : appointment.status === "CONFIRMED" && appointment.source === "ONLINE" ? <><button onClick={() => setOnlineCheckIn(appointment)} className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accentDark"><CheckCircle2 size={14} /> Verify & check in</button><button onClick={() => void updateOnline(appointment, "no-show")} className="rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-inkSoft">No-show</button><button onClick={() => void updateOnline(appointment, "cancel")} className="rounded-md border border-alertSoft px-2.5 py-1.5 text-xs font-semibold text-alert">Doctor unavailable</button></> : <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${appointment.status === "CHECKED_IN" || appointment.status === "CONFIRMED" ? "bg-accentSoft text-accentDark" : "bg-[#eee9df] text-inkSoft"}`}>{appointment.status === "CHECKED_IN" ? "In queue" : appointment.status === "CONFIRMED" ? "Confirmed" : appointment.status.replaceAll("_", " ")}</span>}</div>
           </div>)}
         </div>}
       </div>
@@ -98,15 +125,19 @@ export default function FrontDeskSchedule() {
   );
 }
 
-function OnlineCheckInForm({ appointment, onClose, onSubmit, onError }: { appointment: Appointment; onClose: () => void; onSubmit: (age: string, gender: string) => Promise<void>; onError: (message: string) => void }) {
-  const [age, setAge] = useState("");
+function OnlineCheckInForm({ appointment, onClose, onSubmit, onError }: { appointment: Appointment; onClose: () => void; onSubmit: (dateOfBirth: string, gender: string, vital: VitalInput) => Promise<void>; onError: (message: string) => void }) {
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("");
+  const [vital, setVital] = useState<VitalInput>({ heightCm: "", weightKg: "", bloodPressure: "", temperatureC: "", pulseBpm: "", respiratoryRate: "", oxygenSaturation: "" });
   const [saving, setSaving] = useState(false);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setSaving(true); onError("");
-    try { await onSubmit(age, gender); } catch (reason) { onError(reason instanceof Error ? reason.message : "Could not check in this patient."); setSaving(false); }
+    try { await onSubmit(dateOfBirth, gender, vital); } catch (reason) { onError(reason instanceof Error ? reason.message : "Could not check in this patient."); setSaving(false); }
   };
-  return <div className="fixed inset-0 z-20 flex items-start justify-center bg-black/30 px-4 pt-16"><form onSubmit={submit} className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"><div className="mb-2 flex items-center justify-between"><div className="font-serif text-lg font-semibold">Check in online patient</div><button type="button" onClick={onClose} aria-label="Close" className="p-1"><X size={18} /></button></div><p className="mb-5 text-sm text-inkSoft">Complete the patient record for <b className="text-ink">{appointment.patient.name}</b> before moving them to the waiting room.</p><div className="grid grid-cols-2 gap-3"><F label="Age" required><input required type="number" min="1" max="130" value={age} onChange={(event) => setAge(event.target.value)} className="w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2.5 text-sm" /></F><F label="Gender" required><select required value={gender} onChange={(event) => setGender(event.target.value)} className="w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2.5 text-sm"><option value="">Select</option><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F></div><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button><button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Checking in..." : "Check in"}</button></div></form></div>;
+  const setVitalValue = (field: keyof VitalInput, value: string) => setVital((current) => ({ ...current, [field]: value }));
+  const inputClass = "w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2.5 text-sm";
+  const age = calculateAge(dateOfBirth);
+  return <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-black/30 px-4 py-8"><form onSubmit={submit} className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl"><div className="mb-2 flex items-center justify-between"><div className="font-serif text-lg font-semibold">Verify & check in</div><button type="button" onClick={onClose} aria-label="Close" className="p-1"><X size={18} /></button></div><p className="mb-4 text-sm text-inkSoft">Confirm these booking details with the patient, then complete the short registration to move them to the waiting room.</p><div className="mb-4 rounded-lg bg-accentSoft p-3 text-sm"><div className="font-semibold text-ink">{appointment.patient.name}</div><div className="mt-1 text-inkSoft">{appointment.patient.email || "No email provided"}</div><div className="text-inkSoft">{appointment.patient.phone || "No phone provided"}</div></div><div className="grid grid-cols-2 gap-3"><F label="Date of birth" required><input required type="date" max={today()} value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} className={inputClass} /></F><F label="Age"><input readOnly value={age == null ? "" : `${age} years`} placeholder="Calculated automatically" className={`${inputClass} cursor-not-allowed text-inkSoft`} /></F><F label="Gender" required><select required value={gender} onChange={(event) => setGender(event.target.value)} className={inputClass}><option value="">Select</option><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F></div><div className="mt-5 border-t border-border pt-4"><div className="mb-3"><div className="text-sm font-semibold text-ink">Vitals <span className="font-normal text-inkSoft">(optional)</span></div><p className="text-xs text-inkSoft">Record measurements taken at reception for the clinical team.</p></div><div className="grid grid-cols-2 gap-3"><F label="Height (cm)"><input type="text" inputMode="decimal" value={vital.heightCm} onChange={(event) => setVitalValue("heightCm", event.target.value)} className={inputClass} /></F><F label="Weight (kg)"><input type="text" inputMode="decimal" value={vital.weightKg} onChange={(event) => setVitalValue("weightKg", event.target.value)} className={inputClass} /></F><F label="Blood pressure"><input type="text" inputMode="numeric" value={vital.bloodPressure} onChange={(event) => setVitalValue("bloodPressure", event.target.value)} placeholder="e.g. 118/76" className={inputClass} /></F><F label="Temperature (°C)"><input type="text" inputMode="decimal" value={vital.temperatureC} onChange={(event) => setVitalValue("temperatureC", event.target.value)} className={inputClass} /></F><F label="Pulse (bpm)"><input type="text" inputMode="numeric" value={vital.pulseBpm} onChange={(event) => setVitalValue("pulseBpm", event.target.value)} className={inputClass} /></F><F label="Respiratory rate"><input type="text" inputMode="numeric" value={vital.respiratoryRate} onChange={(event) => setVitalValue("respiratoryRate", event.target.value)} className={inputClass} /></F><F label="Oxygen saturation (%)"><input type="text" inputMode="decimal" value={vital.oxygenSaturation} onChange={(event) => setVitalValue("oxygenSaturation", event.target.value)} className={inputClass} /></F></div></div><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button><button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Checking in..." : "Check in"}</button></div></form></div>;
 }
 
 function AppointmentForm({ date, doctors, onClose, onSaved }: { date: string; doctors: Doctor[]; onClose: () => void; onSaved: (notifications: { email: string }) => void }) {

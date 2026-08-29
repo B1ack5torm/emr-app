@@ -96,7 +96,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
       <div className="grid grid-cols-2 gap-3 mt-4 bg-card border border-border rounded-lg p-3.5 text-sm">
         <div><b>Chief complaint:</b> {visit.chiefComplaint || "—"}</div>
-        <div><b>Vitals:</b> BP {visit.bp || "—"}, Temp {visit.temperature || "—"}°F, Pulse {visit.pulse || "—"}, Wt {visit.weight || "—"}kg</div>
+        <div><b>Vitals:</b> BP {visit.bp || "—"}, Temp {visit.temperature || "—"}°C, Pulse {visit.pulse || "—"}, Wt {visit.weight || "—"}kg</div>
       </div>
 
       {pastVisits.length > 0 && (
@@ -231,7 +231,7 @@ function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, 
     <header className="border-b-2 border-[#2E6B5A] pb-4 mb-5"><h1 className="text-2xl font-bold">CareChart</h1><p className="text-sm">Consultation Report</p></header>
     <section className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm mb-5"><p><b>Patient:</b> {visit.patient.name}</p><p><b>Report date:</b> {new Date(visit.signedAt || visit.createdAt).toLocaleDateString()}</p><p><b>Age / Gender:</b> {visit.patient.age} years / {visit.patient.gender}</p><p><b>MRN:</b> {visit.patient.mrn}</p><p><b>Phone:</b> {visit.patient.phone || "—"}</p><p><b>Doctor:</b> Dr. {doctorName}</p></section>
     <ReportSection title="Chief complaint">{visit.chiefComplaint || "—"}</ReportSection>
-    <ReportSection title="Vitals">BP: {visit.bp || "—"} · Temperature: {visit.temperature || "—"}°F · Pulse: {visit.pulse || "—"} · Weight: {visit.weight || "—"} kg</ReportSection>
+    <ReportSection title="Vitals">BP: {visit.bp || "—"} · Temperature: {visit.temperature || "—"}°C · Pulse: {visit.pulse || "—"} · Weight: {visit.weight || "—"} kg</ReportSection>
     <ReportSection title="Examination findings"><span className="whitespace-pre-wrap">{notes || "—"}</span></ReportSection>
     <ReportSection title="Diagnosis">{diagnosis || "—"}</ReportSection>
     <ReportSection title="Advice"><span className="whitespace-pre-wrap">{advice || "—"}</span></ReportSection>
