@@ -85,6 +85,10 @@ Apply committed migrations in a deployed environment with `npx prisma migrate de
 
 `DATABASE_URL`, `NEXTAUTH_SECRET`, and notification settings are documented in `.env.example`. Keep `.env` out of source control. Default scheduling display is Asia/Kolkata, while database timestamps are stored in UTC.
 
+### Local imaging worklist test
+
+Set `MLLP_HOST=127.0.0.1` and `MLLP_PORT=2575`, then start the local receiver with `npm run mllp:mock`. It stores each correctly framed ORM message under `storage/mllp-mock` and returns `AA` by default. Set `MOCK_MLLP_ACK_CODE` to `AE` or `AR` to exercise failure handling; raw HL7 is stored but never printed to the terminal.
+
 ## Quality checks
 
 ```bash

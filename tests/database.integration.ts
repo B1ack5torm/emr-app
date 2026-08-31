@@ -46,3 +46,19 @@ test("serializable reservations prevent concurrent double booking", async () => 
   assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
   assert.equal(results.filter((result) => result.status === "rejected").length, 1);
 });
+
+test("imaging identifiers are unique and orders remain tenant scoped with an audit trail", async () => {
+  const [organizationId, otherOrganizationId] = orgIds;
+  const patient = await prisma.patient.findFirstOrThrow({ where: { organizationId } });
+  const doctor = await prisma.user.findFirstOrThrow({ where: { organizationId, role: "DOCTOR" } });
+  const visit = await prisma.visit.create({ data: { patientId: patient.id, doctorId: doctor.id, status: "WAITING", chiefComplaint: "Fictional cough" } });
+  const order = await prisma.imagingOrder.create({ data: { visitId: visit.id, accessionNumber: `ACC-${suffix}`, messageControlId: `CC-${suffix}`, modality: "XRAY", procedureCode: "XR-CHEST-2V", procedureDescription: "Chest X-ray, 2 views", bodyPart: "Chest", clinicalIndication: "Fictional test indication" } });
+  await prisma.auditEvent.create({ data: { organizationId, userId: doctor.id, patientId: patient.id, action: "IMAGING_ORDER_PLACED", resourceType: "ImagingOrder", resourceId: order.id, newValue: { status: "ORDERED" } } });
+
+  assert.equal(await prisma.imagingOrder.findFirst({ where: { id: order.id, visit: { patient: { organizationId: otherOrganizationId } } } }), null);
+  await assert.rejects(prisma.imagingOrder.create({ data: { visitId: visit.id, accessionNumber: order.accessionNumber, messageControlId: `CC-OTHER-${suffix}`, modality: "XRAY", procedureCode: "XR-CHEST-2V", procedureDescription: "Chest X-ray", clinicalIndication: "Test" } }), (error: any) => error?.code === "P2002");
+  await assert.rejects(prisma.imagingOrder.create({ data: { visitId: visit.id, accessionNumber: `ACC-OTHER-${suffix}`, messageControlId: order.messageControlId, modality: "XRAY", procedureCode: "XR-CHEST-2V", procedureDescription: "Chest X-ray", clinicalIndication: "Test" } }), (error: any) => error?.code === "P2002");
+  const auditEvent = await prisma.auditEvent.findFirstOrThrow({ where: { organizationId, resourceType: "ImagingOrder", resourceId: order.id } });
+  assert.equal(auditEvent.userId, doctor.id);
+  assert.equal(auditEvent.action, "IMAGING_ORDER_PLACED");
+});

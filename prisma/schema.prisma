@@ -975,12 +975,17 @@ enum OrderStatus {
 model ImagingOrder {
   id                   String          @id @default(cuid())
   accessionNumber      String          @unique
+  messageControlId     String          @unique
   modality             ImagingModality
+  procedureCode        String
   procedureDescription String
   bodyPart             String?
+  clinicalIndication   String
   status               OrderStatus     @default(ORDERED)
   hl7Sent              String?
   hl7AckReceived       String?
+  ackCode              String?
+  ackErrorText         String?
   errorMessage         String?
   createdAt            DateTime        @default(now())
   sentAt               DateTime?

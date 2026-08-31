@@ -71,6 +71,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   };
 
   const completed = visit.status === "COMPLETED";
+  const imagingDisabled = !["DRAFT", "WAITING", "IN_PROGRESS"].includes(visit.status);
   const printReport = () => { setError(""); window.print(); };
 
   return (
@@ -163,7 +164,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           <div className="flex items-center gap-2 text-xs font-bold text-inkSoft uppercase mb-2">
             Imaging order (sends HL7 to modality worklist)
           </div>
-          <ImagingOrderPanel visitId={visit.id} />
+          <ImagingOrderPanel visit={visit} disabled={imagingDisabled} />
         </div>
 
         <div className="border-t border-border pt-4">
@@ -243,10 +244,19 @@ function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, 
 
 function ReportSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className="mb-4 text-sm"><h2 className="font-bold uppercase text-xs mb-1">{title}</h2><div>{children}</div></section>; }
 
-function ImagingOrderPanel({ visitId }: { visitId: string }) {
-  const [modality, setModality] = useState("XRAY");
-  const [procedureDescription, setProcedureDescription] = useState("");
-  const [bodyPart, setBodyPart] = useState("");
+type ImagingProcedure = { id: string; code: string; name: string };
+
+function modalityForProcedure(code: string) {
+  if (code.startsWith("CT")) return "CT";
+  if (code.startsWith("MR")) return "MRI";
+  if (code.startsWith("US")) return "ULTRASOUND";
+  if (code.startsWith("NM")) return "NUCLEAR";
+  return "XRAY";
+}
+
+function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean }) {
+  const [form, setForm] = useState({ modality: "XRAY", procedureCode: "", procedureDescription: "", bodyPart: "", clinicalIndication: "" });
+  const [procedures, setProcedures] = useState<ImagingProcedure[]>([]);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
@@ -254,109 +264,68 @@ function ImagingOrderPanel({ visitId }: { visitId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-
-    fetch(`/api/visits/${visitId}/imaging-orders`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Could not load imaging orders.");
-        return res.json();
-      })
-      .then((savedOrders) => {
-        if (!cancelled) setOrders(savedOrders);
-      })
-      .catch(() => {
-        if (!cancelled) setOrdersError("Could not load saved imaging orders.");
-      });
-
+    Promise.all([
+      fetch(`/api/visits/${visit.id}/imaging-orders`).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
+      fetch("/api/imaging-procedures").then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
+    ]).then(([savedOrders, savedProcedures]) => {
+      if (cancelled) return;
+      setOrders(savedOrders);
+      setProcedures(savedProcedures);
+      const chestXray = savedProcedures.find((procedure: ImagingProcedure) => procedure.code === "XR-CHEST-2V") || savedProcedures[0];
+      if (chestXray) setForm((current) => ({ ...current, modality: modalityForProcedure(chestXray.code), procedureCode: chestXray.code, procedureDescription: chestXray.name, bodyPart: chestXray.code === "XR-CHEST-2V" ? "Chest" : current.bodyPart }));
+    }).catch((reason) => { if (!cancelled) setOrdersError(reason?.message || "Could not load imaging order details."); });
     return () => { cancelled = true; };
-  }, [visitId]);
+  }, [visit.id]);
 
-  const send = async () => {
-    setSending(true);
-    setResult(null);
-    const res = await fetch(`/api/visits/${visitId}/imaging-orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ modality, procedureDescription, bodyPart }),
-    });
-    const data = await res.json();
-    setSending(false);
-    setResult(data);
-    if (data.order) setOrders((current) => [data.order, ...current.filter((order) => order.id !== data.order.id)]);
+  const chooseProcedure = (code: string) => {
+    const procedure = procedures.find((item) => item.code === code);
+    if (!procedure) return setForm({ ...form, procedureCode: "", procedureDescription: "" });
+    setForm({ ...form, procedureCode: procedure.code, procedureDescription: procedure.name, modality: modalityForProcedure(procedure.code), bodyPart: procedure.code === "XR-CHEST-2V" ? "Chest" : form.bodyPart });
   };
 
-  return (
-    <div className="bg-card border border-border rounded-lg p-4">
-      <div className="grid grid-cols-3 gap-3 mb-3">
-        <select value={modality} onChange={(e) => setModality(e.target.value)} className="imgInput">
-          <option value="XRAY">X-Ray</option>
-          <option value="CT">CT</option>
-          <option value="MRI">MRI</option>
-          <option value="ULTRASOUND">Ultrasound</option>
-        </select>
-        <input placeholder="Procedure (e.g. Cervical Spine 2 Views)" value={procedureDescription} onChange={(e) => setProcedureDescription(e.target.value)} className="imgInput" />
-        <input placeholder="Body part (optional)" value={bodyPart} onChange={(e) => setBodyPart(e.target.value)} className="imgInput" />
-      </div>
-      <button onClick={send} disabled={sending || !procedureDescription} className="bg-accent text-white text-sm font-semibold px-4 py-2 rounded-lg">
-        {sending ? "Sending…" : "Send order to modality worklist"}
-      </button>
+  const send = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSending(true); setResult(null); setOrdersError("");
+    try {
+      const response = await fetch(`/api/visits/${visit.id}/imaging-orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const data = await response.json();
+      setResult(data);
+      if (data.order) setOrders((current) => [data.order, ...current.filter((order) => order.id !== data.order.id)]);
+      if (!response.ok && !data.order) setOrdersError(data.error || "Could not submit the imaging order.");
+    } catch {
+      setOrdersError("Could not submit the imaging order.");
+    } finally {
+      setSending(false);
+    }
+  };
 
-      {result?.order && (
-        <div className="mt-3 text-sm">
-          <div>
-            Accession <b>{result.order.accessionNumber}</b> — status:{" "}
-            <span className={result.order.status === "ACK_OK" ? "text-accentDark font-semibold" : "text-alert font-semibold"}>
-              {result.order.status}
-            </span>
-          </div>
-          {result.warning && <div className="text-waiting text-xs mt-1">{result.warning}</div>}
-          {result.error && <div className="text-alert text-xs mt-1">{result.error}</div>}
-          <details className="mt-2">
-            <summary className="cursor-pointer text-xs text-inkSoft">View raw HL7</summary>
-            <pre className="text-xs bg-[#FAF8F2] p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{result.order.hl7Sent}</pre>
-            {result.order.hl7AckReceived && (
-              <>
-                <div className="text-xs text-inkSoft mt-2">ACK received:</div>
-                <pre className="text-xs bg-[#FAF8F2] p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{result.order.hl7AckReceived}</pre>
-              </>
-            )}
-          </details>
-        </div>
-      )}
-      {ordersError && <div className="text-alert text-xs mt-3">{ordersError}</div>}
-      {orders.length > 0 && (
-        <details className="mt-3" open={Boolean(result?.order)}>
-          <summary className="cursor-pointer text-xs font-semibold text-accentDark">
-            View saved imaging order{orders.length > 1 ? "s" : ""} ({orders.length})
-          </summary>
-          <div className="flex flex-col gap-2 mt-2">
-            {orders.map((order) => (
-              <div key={order.id} className="text-xs bg-[#FAF8F2] border border-border rounded p-2">
-                <div>
-                  <b>{order.modality}</b> — {order.procedureDescription}{order.bodyPart ? ` (${order.bodyPart})` : ""}
-                </div>
-                <div className="text-inkSoft mt-1">
-                  Accession {order.accessionNumber} · Status {order.status}
-                  {order.sentAt ? ` · Sent ${new Date(order.sentAt).toLocaleString()}` : ""}
-                </div>
-                {order.hl7Sent && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-inkSoft">View raw HL7</summary>
-                    <pre className="bg-white p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{order.hl7Sent}</pre>
-                    {order.hl7AckReceived && (
-                      <>
-                        <div className="text-inkSoft mt-2">ACK received:</div>
-                        <pre className="bg-white p-2 rounded mt-1 whitespace-pre-wrap break-all overflow-x-auto">{order.hl7AckReceived}</pre>
-                      </>
-                    )}
-                    {order.errorMessage && <div className="text-alert mt-2">{order.errorMessage}</div>}
-                  </details>
-                )}
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-      <style jsx>{`.imgInput { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; }`}</style>
+  return <div className="rounded-lg border border-border bg-card p-4">
+    <div className="rounded-lg bg-[#FAF8F2] p-3">
+      <p className="text-xs font-bold uppercase text-inkSoft">1. Review patient details</p>
+      <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div><span className="text-inkSoft">Patient</span><br /><b>{visit.patient.name}</b></div>
+        <div><span className="text-inkSoft">MRN</span><br /><b>{visit.patient.mrn}</b></div>
+        <div><span className="text-inkSoft">DOB / Sex</span><br /><b>{visit.patient.dateOfBirth ? new Date(visit.patient.dateOfBirth).toLocaleDateString() : "DOB missing"} · {visit.patient.gender}</b></div>
+        <div><span className="text-inkSoft">Encounter / Provider</span><br /><b>{visit.id.slice(-8)} · Dr. {visit.doctor?.name || "Current doctor"}</b></div>
+      </div>
     </div>
-  );
+
+    {!disabled ? <form onSubmit={send} className="mt-4">
+      <p className="mb-2 text-xs font-bold uppercase text-inkSoft">2. Enter and submit the order</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="text-xs text-inkSoft">Procedure<select value={form.procedureCode} onChange={(event) => chooseProcedure(event.target.value)} className="imgInput mt-1" required><option value="">Select a seeded procedure</option>{procedures.map((procedure) => <option key={procedure.id} value={procedure.code}>{procedure.code} · {procedure.name}</option>)}</select></label>
+        <label className="text-xs text-inkSoft">Modality<select value={form.modality} onChange={(event) => setForm({ ...form, modality: event.target.value })} className="imgInput mt-1"><option value="XRAY">X-Ray</option><option value="CT">CT</option><option value="MRI">MRI</option><option value="ULTRASOUND">Ultrasound</option><option value="NUCLEAR">Nuclear medicine</option><option value="OTHER">Other</option></select></label>
+        <label className="text-xs text-inkSoft">Procedure description<input required value={form.procedureDescription} onChange={(event) => setForm({ ...form, procedureDescription: event.target.value })} className="imgInput mt-1" /></label>
+        <label className="text-xs text-inkSoft">Body part (optional)<input value={form.bodyPart} onChange={(event) => setForm({ ...form, bodyPart: event.target.value })} className="imgInput mt-1" /></label>
+        <label className="text-xs text-inkSoft md:col-span-2">Clinical indication<textarea required value={form.clinicalIndication} onChange={(event) => setForm({ ...form, clinicalIndication: event.target.value })} placeholder="Reason for imaging and relevant clinical findings" className="imgInput mt-1 min-h-[70px]" /></label>
+      </div>
+      <button disabled={sending || !form.procedureCode || !form.clinicalIndication.trim() || !visit.patient.dateOfBirth} className="mt-3 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{sending ? "Awaiting imaging ACK…" : "Submit imaging order"}</button>
+      {!visit.patient.dateOfBirth && <p className="mt-2 text-xs text-alert">Add the patient&apos;s date of birth before submitting this order.</p>}
+    </form> : <p className="mt-3 text-xs text-inkSoft">This encounter is finalized. New imaging orders require an active encounter.</p>}
+
+    {result?.order && <div className={`mt-3 rounded-lg p-3 text-sm ${result.order.status === "SENT" ? "bg-accentSoft text-accentDark" : "bg-alertSoft text-alert"}`}><b>{result.order.procedureDescription}</b> · {result.order.status}<p className="mt-1 text-xs">Accession {result.order.accessionNumber}{result.order.ackCode ? ` · ACK ${result.order.ackCode}` : ""}</p>{(result.order.ackErrorText || result.order.errorMessage || result.error || result.warning) && <p className="mt-1 text-xs">{result.order.ackErrorText || result.order.errorMessage || result.error || result.warning}</p>}</div>}
+    {ordersError && <p className="mt-3 text-xs text-alert">{ordersError}</p>}
+    {orders.length > 0 && <details className="mt-3" open={Boolean(result?.order)}><summary className="cursor-pointer text-xs font-semibold text-accentDark">Imaging order history ({orders.length})</summary><div className="mt-2 space-y-2">{orders.map((order) => <div key={order.id} className="rounded border border-border bg-[#FAF8F2] p-2 text-xs"><b>{order.procedureCode} · {order.procedureDescription}</b><p className="mt-1 text-inkSoft">Accession {order.accessionNumber} · {order.status}{order.ackCode ? ` · ACK ${order.ackCode}` : ""}{order.sentAt ? ` · ${new Date(order.sentAt).toLocaleString()}` : ""}</p>{(order.ackErrorText || order.errorMessage) && <p className="mt-1 text-alert">{order.ackErrorText || order.errorMessage}</p>}</div>)}</div></details>}
+    <style jsx>{`.imgInput { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; color: #17202A; }`}</style>
+  </div>;
 }
