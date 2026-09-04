@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const patient = await prisma.patient.findUnique({
     where: { id: params.id },
-    include: { allergies: true, visits: { orderBy: { createdAt: "desc" }, include: { prescriptions: true, testsOrdered: true, doctor: { select: { name: true } } } } },
+    include: { allergies: true, visits: { orderBy: { createdAt: "desc" }, include: { prescriptions: true, testsOrdered: true, imagingRecommendations: true, doctor: { select: { name: true } } } } },
   });
 
   if (!patient || patient.organizationId !== organizationId) return NextResponse.json({ error: "Not found" }, { status: 404 });

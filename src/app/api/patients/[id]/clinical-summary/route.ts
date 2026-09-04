@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       procedures: { orderBy: { performedAt: "desc" } },
       clinicalFlags: { orderBy: [{ active: "desc" }, { severity: "desc" }, { createdAt: "desc" }] },
       diagnosticObservations: { orderBy: { observedAt: "desc" }, take: 100, include: { order: { select: { id: true, orderNumber: true, procedureName: true } } } },
-      visits: { orderBy: { createdAt: "desc" }, take: 25, include: { prescriptions: true, testsOrdered: true, doctor: { select: { name: true } }, vitals: { orderBy: { measuredAt: "desc" }, take: 1 }, diagnoses: true } },
+      visits: { orderBy: { createdAt: "desc" }, take: 25, include: { prescriptions: true, testsOrdered: true, imagingRecommendations: true, doctor: { select: { name: true } }, vitals: { orderBy: { measuredAt: "desc" }, take: 1 }, diagnoses: true } },
       sourceMergeRecords: { orderBy: { createdAt: "desc" }, select: { id: true, sourcePatientId: true, reason: true, createdAt: true } },
     },
   });

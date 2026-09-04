@@ -7,7 +7,7 @@ import net from "node:net";
 import { buildORM } from "../src/lib/hl7";
 import { frameMLLP, MLLP_FS, MLLP_VT, parseAck, sendHL7ViaMLLP, type AckCode } from "../src/lib/mllp";
 import { createMockMLLPReceiver } from "../src/lib/mock-mllp";
-import { imagingOrderStatusForAck, isActiveImagingOrderEncounter, newAccessionNumber, newMessageControlId, validateImagingOrderInput } from "../src/lib/domain/imaging-orders";
+import { canCreateOperationalImagingOrder, imagingOrderStatusForAck, isActiveImagingOrderEncounter, newAccessionNumber, newMessageControlId, validateImagingOrderInput } from "../src/lib/domain/imaging-orders";
 
 const controlId = "CC-TEST-0001";
 const orm = buildORM({
@@ -39,6 +39,8 @@ test("ORM^O01 contains the required patient, encounter, provider, and order fiel
 });
 
 test("order input is bounded and restricted to active encounters", () => {
+  assert.deepEqual(canCreateOperationalImagingOrder(false), { allowed: false, code: "IMAGING_ORDERS_DISABLED" });
+  assert.deepEqual(canCreateOperationalImagingOrder(true), { allowed: true, code: null });
   assert.equal(isActiveImagingOrderEncounter("WAITING"), true);
   assert.equal(isActiveImagingOrderEncounter("IN_PROGRESS"), true);
   assert.equal(isActiveImagingOrderEncounter("COMPLETED"), false);

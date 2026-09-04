@@ -22,7 +22,7 @@ export async function GET() {
       appointments: { orderBy: { scheduledAt: "desc" }, select: { id: true, scheduledAt: true, durationMinutes: true, reason: true, status: true, doctor: { select: { name: true } } } },
       visits: {
         where: { status: "COMPLETED" }, orderBy: { createdAt: "desc" },
-        select: { id: true, createdAt: true, signedAt: true, chiefComplaint: true, bp: true, temperature: true, pulse: true, weight: true, diagnosis: true, doctorNotes: true, advice: true, doctor: { select: { name: true } }, prescriptions: { select: { id: true, medicine: true, dosage: true, frequency: true, duration: true } }, testsOrdered: { select: { id: true, name: true } } },
+        select: { id: true, createdAt: true, signedAt: true, chiefComplaint: true, bp: true, temperature: true, pulse: true, weight: true, diagnosis: true, doctorNotes: true, advice: true, doctor: { select: { name: true } }, prescriptions: { select: { id: true, medicine: true, dosage: true, frequency: true, duration: true } }, testsOrdered: { select: { id: true, name: true } }, imagingRecommendations: { select: { id: true, code: true, name: true, modality: true, bodyPart: true, description: true } } },
       },
       invoices: { where: { status: { not: "VOID" } }, orderBy: { createdAt: "desc" }, select: { id: true, invoiceNo: true, subtotal: true, taxTotal: true, grandTotal: true, amountPaid: true, status: true, createdAt: true, items: { select: { id: true, category: true, description: true, quantity: true, total: true } } } },
     },

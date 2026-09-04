@@ -17,6 +17,12 @@ export function canReviewDiagnosticOrder(role: string | null | undefined, userId
   return role === "DOCTOR" && !!userId && userId === orderingPractitionerId;
 }
 
+export function canCreateOperationalDiagnosticOrder(enabled: boolean, encounterSignedAt: Date | string | null | undefined) {
+  if (!enabled) return { allowed: false, code: "DIAGNOSTIC_ORDERS_DISABLED" as const };
+  if (encounterSignedAt) return { allowed: false, code: "ENCOUNTER_FINALIZED" as const };
+  return { allowed: true, code: null };
+}
+
 export interface DiagnosticIntegrationAdapter {
   sendADT(message: unknown): Promise<void>;
   sendORM(order: unknown): Promise<void>;

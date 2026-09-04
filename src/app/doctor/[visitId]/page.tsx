@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer } from "lucide-react";
+import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer, ScanLine } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
 
 type SafetyWarning = { index: number; code: "ALLERGY" | "DUPLICATE_THERAPY" | "INTERACTION"; severity: string; message: string };
 type Rx = { medicine: string; dosage: string; frequency: string; duration: string; allergyWarningAcknowledged?: boolean; interactionOverrideReason?: string; safetyWarnings?: SafetyWarning[] };
 type LabTestOption = { code: string; name: string; category: string; aliases: string[] };
+type ImagingRecommendation = { code: string; name: string; modality: string; bodyPart?: string; description: string };
+type ImagingCatalogOption = ImagingRecommendation & { aliases: string[] };
 
 export default function ConsultPage({ params }: { params: { visitId: string } }) {
   const router = useRouter();
@@ -23,6 +25,11 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [labTests, setLabTests] = useState<LabTestOption[]>([]);
   const [labTestTotal, setLabTestTotal] = useState(0);
   const [showTestSuggestions, setShowTestSuggestions] = useState(false);
+  const [imagingRecommendations, setImagingRecommendations] = useState<ImagingRecommendation[]>([]);
+  const [imagingDraft, setImagingDraft] = useState("");
+  const [imagingCatalog, setImagingCatalog] = useState<ImagingCatalogOption[]>([]);
+  const [imagingCatalogTotal, setImagingCatalogTotal] = useState(0);
+  const [showImagingSuggestions, setShowImagingSuggestions] = useState(false);
   const [signConfirmed, setSignConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [pastVisits, setPastVisits] = useState<any[]>([]);
@@ -35,6 +42,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       setAdvice(v.advice || "");
       setRx(v.prescriptions?.length ? v.prescriptions : []);
       setTests((v.testsOrdered || []).map((t: any) => t.name));
+      setImagingRecommendations(v.imagingRecommendations || []);
       fetch(`/api/patients/${v.patientId}`).then((r) => r.json()).then((p) => {
         setPastVisits((p.visits || []).filter((pv: any) => pv.id !== v.id && pv.status === "COMPLETED"));
       });
@@ -49,6 +57,18 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       return data;
     }).then((data) => {
       if (!cancelled) { setLabTests(data.tests || []); setLabTestTotal(data.total || 0); }
+    }).catch(() => { /* Free-text entry remains available if the catalog cannot load. */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/imaging-catalog").then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load imaging procedures.");
+      return data;
+    }).then((data) => {
+      if (!cancelled) { setImagingCatalog(data.procedures || []); setImagingCatalogTotal(data.total || 0); }
     }).catch(() => { /* Free-text entry remains available if the catalog cannot load. */ });
     return () => { cancelled = true; };
   }, []);
@@ -76,12 +96,36 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     }).slice(0, 12);
   })();
 
+  const addImaging = (procedure?: ImagingCatalogOption) => {
+    const enteredName = imagingDraft.trim();
+    const item: ImagingRecommendation | null = procedure ? {
+      code: procedure.code, name: procedure.name, modality: procedure.modality,
+      bodyPart: procedure.bodyPart, description: procedure.description,
+    } : enteredName ? { code: "", name: enteredName, modality: "Other", description: `${enteredName} — clinician-entered imaging request.` } : null;
+    if (!item) return;
+    if (!imagingRecommendations.some((existing) => existing.name.toLocaleLowerCase() === item.name.toLocaleLowerCase())) setImagingRecommendations([...imagingRecommendations, item]);
+    setImagingDraft(""); setShowImagingSuggestions(false);
+  };
+
+  const normalizeImagingSearch = (value: string) => value.toLocaleLowerCase().replace(/x[\s-]?ray/g, "xray").replace(/[^a-z0-9]+/g, " ").trim();
+  const imagingSuggestions = (() => {
+    const ignored = new Set(["a", "an", "the", "of", "for", "to"]);
+    const terms = normalizeImagingSearch(imagingDraft).split(/\s+/).filter((term) => term && !ignored.has(term));
+    return imagingCatalog.filter((item) => {
+      if (imagingRecommendations.some((selected) => selected.name.toLocaleLowerCase() === item.name.toLocaleLowerCase())) return false;
+      if (!terms.length) return true;
+      const haystack = normalizeImagingSearch(`${item.name} ${item.modality} ${item.bodyPart || ""} ${item.description} ${item.aliases.join(" ")}`);
+      return terms.every((term) => haystack.includes(term));
+    }).slice(0, 12);
+  })();
+
   const save = async (complete: boolean) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
+    const finalImaging = imagingDraft.trim() ? [...imagingRecommendations, { code: "", name: imagingDraft.trim(), modality: "Other", description: `${imagingDraft.trim()} — clinician-entered imaging request.` }] : imagingRecommendations;
     const res = await fetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ diagnosis, doctorNotes: notes, advice, prescriptions: rx, testsOrdered: finalTests, complete }),
+      body: JSON.stringify({ diagnosis, doctorNotes: notes, advice, prescriptions: rx, testsOrdered: finalTests, imagingRecommendations: finalImaging, complete }),
     });
     if (res.ok) {
       const saved = await res.json();
@@ -93,7 +137,9 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       setVisit((current: any) => ({ ...current, ...saved, patient: current.patient }));
       setRx(saved.prescriptions || rx);
       setTests((saved.testsOrdered || []).map((test: any) => test.name));
+      setImagingRecommendations(saved.imagingRecommendations || imagingRecommendations);
       setTestDraft("");
+      setImagingDraft("");
       setError("");
     } else {
       const data = await res.json().catch(() => ({}));
@@ -200,6 +246,34 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           </div>
         </div>
 
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase text-inkSoft"><ScanLine size={14} /> Imaging ordered</div>
+          <div className="flex items-start gap-2">
+            <div className="relative flex-1">
+              <input value={imagingDraft} onChange={(event) => { setImagingDraft(event.target.value); setShowImagingSuggestions(true); }}
+                onFocus={() => setShowImagingSuggestions(true)} onBlur={() => window.setTimeout(() => setShowImagingSuggestions(false), 150)}
+                onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addImaging(); } }}
+                placeholder="Search chest X-ray 2V, MRI brain, CT KUB, ultrasound…" className="input" role="combobox"
+                aria-expanded={showImagingSuggestions} aria-controls="imaging-procedure-suggestions" autoComplete="off" />
+              {showImagingSuggestions && imagingCatalog.length > 0 && <div id="imaging-procedure-suggestions" className="absolute z-30 mt-1 max-h-96 w-full overflow-y-auto rounded-lg border border-border bg-white shadow-xl" role="listbox">
+                {imagingSuggestions.length > 0 ? imagingSuggestions.map((procedure) => <button key={procedure.code} type="button" role="option" aria-selected="false" onMouseDown={(event) => event.preventDefault()} onClick={() => addImaging(procedure)} className="block w-full border-b border-border px-3 py-2 text-left last:border-0 hover:bg-accentSoft">
+                  <span className="block text-sm font-semibold text-ink">{procedure.name}</span>
+                  <span className="block text-[11px] font-semibold text-accentDark">{procedure.modality} · {procedure.bodyPart}</span>
+                  <span className="mt-0.5 block text-[11px] text-inkSoft">{procedure.description}</span>
+                </button>) : <div className="px-3 py-3 text-sm text-inkSoft">No catalog match. Press Enter or Add to use the typed imaging request.</div>}
+              </div>}
+            </div>
+            <button type="button" onClick={() => addImaging()} className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-sm text-accentDark"><Plus size={14} /> Add</button>
+          </div>
+          <p className="mt-1.5 text-xs text-inkSoft">{imagingCatalogTotal ? `${imagingCatalogTotal} imaging procedures across 12 modalities available. ` : ""}This records the doctor&apos;s recommendation and does not send an HL7 order.</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {imagingRecommendations.map((item, index) => <div key={`${item.code}-${index}`} className="flex items-start justify-between gap-3 rounded-lg border border-[#CFDBE7] bg-[#F3F7FA] px-3 py-2 text-xs">
+              <div><p className="font-semibold text-[#36546F]">{item.name}</p><p className="mt-0.5 font-semibold text-accentDark">{item.modality}{item.bodyPart ? ` · ${item.bodyPart}` : ""}</p><p className="mt-1 text-inkSoft">{item.description}</p></div>
+              <button type="button" aria-label={`Remove ${item.name}`} onClick={() => setImagingRecommendations(imagingRecommendations.filter((_, itemIndex) => itemIndex !== index))} className="shrink-0 p-1 text-inkSoft hover:text-alert"><X size={14} /></button>
+            </div>)}
+          </div>
+        </div>
+
         <DiagnosticOrderPanel visitId={visit.id} disabled={completed} />
 
         <div>
@@ -224,7 +298,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
         </div>
       </div>
       </div>
-      <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} advice={advice} prescriptions={rx} tests={tests} doctorName={visit.doctor?.name || session?.user?.name || ""} signed={completed} />
+      <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} advice={advice} prescriptions={rx} tests={tests} imagingRecommendations={imagingRecommendations} doctorName={visit.doctor?.name || session?.user?.name || ""} signed={completed} />
       <style jsx global>{`.input { font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; width: 100%; } .patient-report { display: none; } @media print { .consult-screen { display: none !important; } .patient-report { display: block !important; color: #17202A; font-family: Arial, sans-serif; } }`}</style>
     </div>
   );
@@ -234,13 +308,14 @@ type DiagnosticOrderSummary = { id: string; orderNumber: string; type: string; p
 
 function DiagnosticOrderPanel({ visitId, disabled }: { visitId: string; disabled: boolean }) {
   const [orders, setOrders] = useState<DiagnosticOrderSummary[]>([]);
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [form, setForm] = useState({ type: "LABORATORY", priority: "ROUTINE", procedureCode: "", procedureName: "", clinicalIndication: "", scheduledAt: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const load = useCallback(async () => {
     const response = await fetch(`/api/diagnostic-orders?visitId=${visitId}&pageSize=100`);
     const data = await response.json();
-    if (response.ok) setOrders(data.orders); else setError(data.error || "Could not load diagnostic orders.");
+    if (response.ok) { setOrders(data.orders); setEnabled(data.operationalDiagnosticOrdersEnabled === true); } else setError(data.error || "Could not load diagnostic orders.");
   }, [visitId]);
   useEffect(() => { void load(); }, [load]);
   const submit = async (event: React.FormEvent) => {
@@ -253,7 +328,9 @@ function DiagnosticOrderPanel({ visitId, disabled }: { visitId: string; disabled
   };
   return <div className="rounded-lg border border-border bg-card p-4">
     <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-inkSoft"><FlaskConical size={14} /> Operational diagnostic orders</div>
-    {!disabled && <form onSubmit={submit} className="grid gap-2 md:grid-cols-2">
+    {enabled === null && !error && <p className="text-xs text-inkSoft">Checking hospital diagnostic capabilities…</p>}
+    {enabled === false && <div className="rounded-lg bg-[#FAF8F2] px-3 py-2 text-sm text-inkSoft"><b>Not enabled for this hospital.</b> Record the requested investigation under Tests ordered above. A hospital administrator can enable operational orders in Settings.</div>}
+    {enabled && !disabled && <form onSubmit={submit} className="grid gap-2 md:grid-cols-2">
       <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })} className="input"><option value="LABORATORY">Laboratory</option><option value="IMAGING">Imaging</option></select>
       <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} className="input"><option value="ROUTINE">Routine</option><option value="URGENT">Urgent</option><option value="STAT">STAT</option></select>
       <input placeholder="Procedure name" required value={form.procedureName} onChange={(event) => setForm({ ...form, procedureName: event.target.value })} className="input" />
@@ -262,13 +339,13 @@ function DiagnosticOrderPanel({ visitId, disabled }: { visitId: string; disabled
       <label className="text-xs text-inkSoft">Schedule (optional)<input type="datetime-local" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} className="input mt-1" /></label>
       <button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 md:col-span-2">{saving ? "Creating…" : "Create diagnostic order"}</button>
     </form>}
-    {disabled && <p className="text-xs text-inkSoft">This encounter is finalized. New orders require an encounter amendment.</p>}
+    {enabled && disabled && <p className="text-xs text-inkSoft">This encounter is finalized. New orders require an encounter amendment.</p>}
     {error && <p className="mt-2 text-sm text-alert">{error}</p>}
     <div className="mt-3 space-y-2">{orders.map((order) => <div key={order.id} className="rounded border border-border bg-[#FAF8F2] p-2 text-xs"><b>{order.procedureName}</b> · {order.type} · {order.priority}<p className="text-inkSoft">{order.orderNumber} · {order.status}{order.scheduledAt ? ` · ${new Date(order.scheduledAt).toLocaleString()}` : ""}</p></div>)}</div>
   </div>;
 }
 
-function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, doctorName, signed }: { visit: any; notes: string; diagnosis: string; advice: string; prescriptions: Rx[]; tests: string[]; doctorName: string; signed: boolean }) {
+function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, imagingRecommendations, doctorName, signed }: { visit: any; notes: string; diagnosis: string; advice: string; prescriptions: Rx[]; tests: string[]; imagingRecommendations: ImagingRecommendation[]; doctorName: string; signed: boolean }) {
   const prescribed = prescriptions.filter((item) => item.medicine?.trim());
   return <article className="patient-report">
     <header className="border-b-2 border-[#2E6B5A] pb-4 mb-5"><h1 className="text-2xl font-bold">CareChart</h1><p className="text-sm">Consultation Report</p></header>
@@ -280,6 +357,7 @@ function PatientReport({ visit, notes, diagnosis, advice, prescriptions, tests, 
     <ReportSection title="Advice"><span className="whitespace-pre-wrap">{advice || "—"}</span></ReportSection>
     <ReportSection title="Prescription">{prescribed.length ? <table className="w-full border-collapse"><thead><tr className="border-b"><th className="text-left py-1">Medicine</th><th className="text-left py-1">Dosage</th><th className="text-left py-1">Frequency</th><th className="text-left py-1">Duration</th></tr></thead><tbody>{prescribed.map((item, index) => <tr key={index} className="border-b"><td className="py-1">{item.medicine}</td><td>{item.dosage || "—"}</td><td>{item.frequency || "—"}</td><td>{item.duration || "—"}</td></tr>)}</tbody></table> : "—"}</ReportSection>
     {tests.length > 0 && <ReportSection title="Tests ordered"><ul className="list-disc pl-5">{tests.map((test, index) => <li key={index}>{test}</li>)}</ul></ReportSection>}
+    {imagingRecommendations.length > 0 && <ReportSection title="Imaging ordered"><ul className="list-disc pl-5">{imagingRecommendations.map((item, index) => <li key={index}><b>{item.name}</b> ({item.modality}{item.bodyPart ? ` · ${item.bodyPart}` : ""})</li>)}</ul></ReportSection>}
     <footer className="mt-12 pt-4 border-t text-sm"><p>{signed ? `Digitally signed by Dr. ${doctorName}` : `Prepared by Dr. ${doctorName}`}</p><p className="text-xs mt-1">This is a computer-generated consultation report.</p></footer>
   </article>;
 }
@@ -303,6 +381,7 @@ function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean 
   const [result, setResult] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersError, setOrdersError] = useState("");
+  const [enabled, setEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -311,7 +390,8 @@ function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean 
       fetch("/api/imaging-procedures").then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
     ]).then(([savedOrders, savedProcedures]) => {
       if (cancelled) return;
-      setOrders(savedOrders);
+      setOrders(savedOrders.orders || []);
+      setEnabled(savedOrders.operationalImagingOrdersEnabled === true);
       setProcedures(savedProcedures);
       const chestXray = savedProcedures.find((procedure: ImagingProcedure) => procedure.code === "XR-CHEST-2V") || savedProcedures[0];
       if (chestXray) setForm((current) => ({ ...current, modality: modalityForProcedure(chestXray.code), procedureCode: chestXray.code, procedureDescription: chestXray.name, bodyPart: chestXray.code === "XR-CHEST-2V" ? "Chest" : current.bodyPart }));
@@ -342,7 +422,9 @@ function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean 
   };
 
   return <div className="rounded-lg border border-border bg-card p-4">
-    <div className="rounded-lg bg-[#FAF8F2] p-3">
+    {enabled === null && !ordersError && <p className="text-sm text-inkSoft">Checking hospital imaging capabilities…</p>}
+    {enabled === false && <div className="rounded-lg border border-border bg-[#FAF8F2] p-3 text-sm"><p className="font-semibold">Operational imaging orders are disabled for this hospital.</p><p className="mt-1 text-xs text-inkSoft">Record the requested scan under Imaging ordered above. An administrator can enable HL7 / modality-worklist orders in Settings.</p></div>}
+    {enabled === true && <><div className="rounded-lg bg-[#FAF8F2] p-3">
       <p className="text-xs font-bold uppercase text-inkSoft">1. Review patient details</p>
       <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div><span className="text-inkSoft">Patient</span><br /><b>{visit.patient.name}</b></div>
@@ -363,7 +445,7 @@ function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean 
       </div>
       <button disabled={sending || !form.procedureCode || !form.clinicalIndication.trim() || !visit.patient.dateOfBirth} className="mt-3 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{sending ? "Awaiting imaging ACK…" : "Submit imaging order"}</button>
       {!visit.patient.dateOfBirth && <p className="mt-2 text-xs text-alert">Add the patient&apos;s date of birth before submitting this order.</p>}
-    </form> : <p className="mt-3 text-xs text-inkSoft">This encounter is finalized. New imaging orders require an active encounter.</p>}
+    </form> : <p className="mt-3 text-xs text-inkSoft">This encounter is finalized. New imaging orders require an active encounter.</p>}</>}
 
     {result?.order && <div className={`mt-3 rounded-lg p-3 text-sm ${result.order.status === "SENT" ? "bg-accentSoft text-accentDark" : "bg-alertSoft text-alert"}`}><b>{result.order.procedureDescription}</b> · {result.order.status}<p className="mt-1 text-xs">Accession {result.order.accessionNumber}{result.order.ackCode ? ` · ACK ${result.order.ackCode}` : ""}</p>{(result.order.ackErrorText || result.order.errorMessage || result.error || result.warning) && <p className="mt-1 text-xs">{result.order.ackErrorText || result.order.errorMessage || result.error || result.warning}</p>}</div>}
     {ordersError && <p className="mt-3 text-xs text-alert">{ordersError}</p>}

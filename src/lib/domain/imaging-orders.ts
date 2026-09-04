@@ -3,6 +3,12 @@ import { randomUUID } from "crypto";
 export const ACTIVE_IMAGING_ORDER_ENCOUNTER_STATUSES = new Set(["DRAFT", "WAITING", "IN_PROGRESS"]);
 export const IMAGING_MODALITIES = new Set(["XRAY", "CT", "MRI", "ULTRASOUND", "NUCLEAR", "OTHER"]);
 
+export function canCreateOperationalImagingOrder(enabled: boolean) {
+  return enabled
+    ? { allowed: true, code: null } as const
+    : { allowed: false, code: "IMAGING_ORDERS_DISABLED" } as const;
+}
+
 export function isActiveImagingOrderEncounter(status: string) {
   return ACTIVE_IMAGING_ORDER_ENCOUNTER_STATUSES.has(status);
 }

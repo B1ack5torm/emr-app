@@ -3,7 +3,7 @@ import type { ImagingModality } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildORM } from "@/lib/hl7";
 import { parseAck, sendHL7ViaMLLP } from "@/lib/mllp";
-import { imagingOrderStatusForAck, isActiveImagingOrderEncounter, newAccessionNumber, newMessageControlId, validateImagingOrderInput } from "@/lib/domain/imaging-orders";
+import { canCreateOperationalImagingOrder, imagingOrderStatusForAck, isActiveImagingOrderEncounter, newAccessionNumber, newMessageControlId, validateImagingOrderInput } from "@/lib/domain/imaging-orders";
 import { audit, requirePermission } from "@/lib/security";
 
 export const runtime = "nodejs";
@@ -28,6 +28,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     include: { patient: true, doctor: { select: { id: true, name: true } } },
   });
   if (!visit) return NextResponse.json({ error: "Encounter not found." }, { status: 404 });
+  const organization = await prisma.organization.findUnique({
+    where: { id: user.organizationId },
+    select: { operationalImagingOrdersEnabled: true },
+  });
+  const policy = canCreateOperationalImagingOrder(organization?.operationalImagingOrdersEnabled === true);
+  if (!policy.allowed) return NextResponse.json({ error: "Operational imaging orders are disabled for this hospital.", code: policy.code }, { status: 403 });
   if (!isActiveImagingOrderEncounter(visit.status)) return NextResponse.json({ error: "Imaging orders can only be placed from an active encounter." }, { status: 409 });
   if (!visit.patient.dateOfBirth) return NextResponse.json({ error: "Review the patient details and record a date of birth before placing an imaging order." }, { status: 409 });
 
@@ -135,6 +141,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (access.response) return access.response;
   const visit = await prisma.visit.findFirst({ where: { id: params.id, patient: { organizationId: access.user.organizationId } }, select: { id: true } });
   if (!visit) return NextResponse.json({ error: "Encounter not found." }, { status: 404 });
-  const orders = await prisma.imagingOrder.findMany({ where: { visitId: visit.id }, orderBy: { createdAt: "desc" } });
-  return NextResponse.json(orders);
+  const [orders, organization] = await Promise.all([
+    prisma.imagingOrder.findMany({ where: { visitId: visit.id }, orderBy: { createdAt: "desc" } }),
+    prisma.organization.findUnique({ where: { id: access.user.organizationId }, select: { operationalImagingOrdersEnabled: true } }),
+  ]);
+  return NextResponse.json({ orders, operationalImagingOrdersEnabled: organization?.operationalImagingOrdersEnabled === true });
 }

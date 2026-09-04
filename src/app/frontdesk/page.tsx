@@ -11,6 +11,9 @@ type Patient = {
 };
 type Doctor = { id: string; name: string };
 type DuplicateMatch = { id: string; mrn: string; name: string; dateOfBirth?: string; phone?: string; email?: string; score: number; reasons: string[] };
+type DobParts = { day: string; month: string; year: string };
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function FrontDeskPage() {
   const [mode, setMode] = useState<"search" | "new" | "visit">("search");
@@ -100,6 +103,18 @@ function calcAge(dobStr: string) {
   return age >= 0 ? String(age) : "";
 }
 
+function validateDob(parts: DobParts) {
+  const hasAnyPart = Boolean(parts.day || parts.month || parts.year);
+  if (!parts.day || !parts.month || parts.year.length !== 4) return { dateOfBirth: "", error: hasAnyPart ? "Complete the day, month and four-digit year, or leave all three blank." : "" };
+  const day = Number(parts.day), month = Number(parts.month), year = Number(parts.year);
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  const today = new Date();
+  const oldestYear = today.getFullYear() - 130;
+  const isRealDate = candidate.getUTCFullYear() === year && candidate.getUTCMonth() === month - 1 && candidate.getUTCDate() === day;
+  if (!isRealDate || year < oldestYear || candidate > today) return { dateOfBirth: "", error: "Enter a valid past date." };
+  return { dateOfBirth: `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`, error: "" };
+}
+
 function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorId: string) => void; onBack: () => void }) {
   const [form, setForm] = useState({ name: "", age: "", gender: "", doctorId: "", phone: "", email: "", dateOfBirth: "", address: "", bloodGroup: "", emergencyContact: "" });
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -108,8 +123,16 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
   const [submitting, setSubmitting] = useState(false);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
+  const [dobParts, setDobParts] = useState<DobParts>({ day: "", month: "", year: "" });
+  const [dobError, setDobError] = useState("");
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const setDob = (v: string) => setForm((f) => ({ ...f, dateOfBirth: v, age: v ? calcAge(v) : f.age }));
+  const setDobPart = (part: keyof DobParts, value: string) => {
+    const next = { ...dobParts, [part]: part === "year" ? value.replace(/\D/g, "").slice(0, 4) : value };
+    const validated = validateDob(next);
+    setDobParts(next);
+    setDobError(validated.error);
+    setForm((current) => ({ ...current, dateOfBirth: validated.dateOfBirth, age: validated.dateOfBirth ? calcAge(validated.dateOfBirth) : current.age }));
+  };
 
   useEffect(() => {
     fetch("/api/doctors").then(async (res) => {
@@ -120,6 +143,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
 
   const submit = async (e?: React.FormEvent, overrideDuplicate = false) => {
     e?.preventDefault();
+    if (dobError) { setError(dobError); return; }
     setError(""); setSubmitting(true);
     const finalAllergies = draft.trim() ? [...allergies, draft.trim()] : allergies;
     const res = await fetch("/api/patients", {
@@ -156,7 +180,14 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
           <div className="mt-3 flex justify-end"><button type="button" disabled={submitting} onClick={() => submit(undefined, true)} className="rounded-lg border border-alert px-3 py-2 text-xs font-bold text-alert">Confirmed different person — create anyway</button></div>
         </div>}
         <F label="Full name" required><input required value={form.name} onChange={(e) => set("name", e.target.value)} className="input" /></F>
-        <F label="Date of birth"><input type="date" max={new Date().toISOString().slice(0, 10)} value={form.dateOfBirth} onChange={(e) => setDob(e.target.value)} className="input" /></F>
+        <F label="Date of birth">
+          <div className="grid grid-cols-[.75fr_1.35fr_1fr] gap-2">
+            <select aria-label="Birth day" value={dobParts.day} onChange={(event) => setDobPart("day", event.target.value)} className="input"><option value="">Day</option>{Array.from({ length: 31 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select>
+            <select aria-label="Birth month" value={dobParts.month} onChange={(event) => setDobPart("month", event.target.value)} className="input"><option value="">Month</option>{MONTHS.map((month, index) => <option key={month} value={index + 1}>{month.slice(0, 3)}</option>)}</select>
+            <input aria-label="Birth year" type="text" inputMode="numeric" placeholder="Year" value={dobParts.year} onChange={(event) => setDobPart("year", event.target.value)} className="input min-w-0" />
+          </div>
+          {dobError ? <p className="mt-1 text-xs text-alert">{dobError}</p> : <p className="mt-1 text-[11px] text-inkSoft">If the exact date is unknown, leave this blank and enter age.</p>}
+        </F>
         <F label="Age" required><input required type="number" min={0} value={form.age} onChange={(e) => set("age", e.target.value)} className="input" /></F>
         <F label="Gender" required><select required value={form.gender} onChange={(e) => set("gender", e.target.value)} className="input"><option value="" disabled>Select gender</option><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="OTHER">Other</option></select></F>
         <F label="Doctor" required><select required value={form.doctorId} onChange={(e) => set("doctorId", e.target.value)} className="input"><option value="" disabled>Select doctor</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>Dr. {doctor.name}</option>)}</select></F>

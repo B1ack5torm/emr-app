@@ -210,6 +210,7 @@ function VisitRow({ visit }: { visit: any }) {
             </div>
           )}
           {visit.testsOrdered?.length > 0 && <div><b>Tests ordered:</b> {visit.testsOrdered.map((t: any) => t.name).join(", ")}</div>}
+          {visit.imagingRecommendations?.length > 0 && <div><b>Imaging ordered:</b> {visit.imagingRecommendations.map((item: any) => `${item.name} (${item.modality})`).join(", ")}</div>}
           {visit.doctor?.name && (
             <div className="pt-2 border-t border-dashed border-border font-serif italic text-accentDark">
               Signed — Dr. {visit.doctor.name}{visit.signedAt ? `, ${new Date(visit.signedAt).toLocaleString()}` : ""}

@@ -132,10 +132,12 @@ enum AppointmentRequestStatus {
 }
 
 model Organization {
-  id                     String                  @id @default(cuid())
-  name                   String
-  slug                   String                  @unique
-  createdAt              DateTime                @default(now())
+  id                                      String                  @id @default(cuid())
+  name                                    String
+  slug                                    String                  @unique
+  operationalDiagnosticOrdersEnabled     Boolean                 @default(false)
+  operationalImagingOrdersEnabled        Boolean                 @default(false)
+  createdAt                               DateTime                @default(now())
   users                  User[]
   patients               Patient[]
   invites                Invite[]
@@ -613,6 +615,7 @@ model Visit {
   doctorId                String?
   prescriptions           Prescription[]
   testsOrdered            TestOrder[]
+  imagingRecommendations  ImagingRecommendation[]
   imagingOrders           ImagingOrder[]
   invoice                 Invoice?
   appointment             Appointment?         @relation("AppointmentVisit", fields: [appointmentId], references: [id])
@@ -874,6 +877,19 @@ model TestOrder {
   name    String
   visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
   visitId String
+}
+
+model ImagingRecommendation {
+  id          String @id @default(cuid())
+  code        String?
+  name        String
+  modality    String
+  bodyPart    String?
+  description String
+  visit       Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visitId     String
+
+  @@index([visitId])
 }
 
 enum PharmacyOrderStatus {

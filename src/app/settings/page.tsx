@@ -10,6 +10,7 @@ type Schedule = { id: string; dayOfWeek: number; startMinute: number; endMinute:
 type Practitioner = { id: string; user: Doctor & { email: string }; clinic: Clinic; department?: Department; specialty: string; qualification?: string; schedules: Schedule[] };
 type Service = { id: string; code: string; name: string; category: string; taxable: boolean; prices: { id: string; unitPrice: number; clinic: { id: string; name: string } }[] };
 type Tax = { id: string; name: string; ratePercent: number; clinic: { id: string; name: string }; effectiveFrom?: string };
+type DiagnosticSettings = { operationalDiagnosticOrdersEnabled: boolean; operationalImagingOrdersEnabled: boolean };
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const CATEGORIES = ["CONSULTATION", "MEDICINE", "TEST", "IMAGING", "OTHER"];
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
+  const [diagnosticSettings, setDiagnosticSettings] = useState<DiagnosticSettings>({ operationalDiagnosticOrdersEnabled: false, operationalImagingOrdersEnabled: false });
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,11 +56,11 @@ export default function SettingsPage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const [clinicData, doctorData, practitionerData, serviceData, taxData] = await Promise.all([
+      const [clinicData, doctorData, practitionerData, serviceData, taxData, diagnosticsData] = await Promise.all([
         requestJson("/api/settings/clinics"), requestJson("/api/doctors"), requestJson("/api/settings/practitioners"),
-        requestJson("/api/settings/billing"), requestJson("/api/settings/taxes"),
+        requestJson("/api/settings/billing"), requestJson("/api/settings/taxes"), requestJson("/api/settings/diagnostics"),
       ]);
-      setClinics(clinicData); setDoctors(doctorData); setPractitioners(practitionerData); setServices(serviceData); setTaxes(taxData);
+      setClinics(clinicData); setDoctors(doctorData); setPractitioners(practitionerData); setServices(serviceData); setTaxes(taxData); setDiagnosticSettings(diagnosticsData);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load settings."); }
   }, []);
 
@@ -85,6 +87,24 @@ export default function SettingsPage() {
   const addHoliday = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/schedules", { kind: "holiday", ...holidayForm }, "Clinic holiday added.", () => setHolidayForm((current) => ({ ...current, date: "", name: "" }))); };
   const configureService = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/billing", { ...serviceForm, unitPrice: Math.round(Number(serviceForm.unitPrice) * 100) }, "Service and clinic price saved.", () => setServiceForm((current) => ({ ...current, code: "", name: "", unitPrice: "" }))); };
   const configureTax = (event: FormEvent) => { event.preventDefault(); void post("/api/settings/taxes", { ...taxForm, ratePercent: Number(taxForm.ratePercent), effectiveFrom: taxForm.effectiveFrom || null }, "Tax configuration added.", () => setTaxForm((current) => ({ ...current, ratePercent: "", effectiveFrom: "" }))); };
+  const updateDiagnosticOrders = async (enabled: boolean) => {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const saved = await requestJson("/api/settings/diagnostics", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operationalDiagnosticOrdersEnabled: enabled }) });
+      setDiagnosticSettings(saved);
+      setNotice(`Operational diagnostic orders ${enabled ? "enabled" : "disabled"}.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update diagnostic settings."); }
+    finally { setBusy(false); }
+  };
+  const updateImagingOrders = async (enabled: boolean) => {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const saved = await requestJson("/api/settings/diagnostics", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ operationalImagingOrdersEnabled: enabled }) });
+      setDiagnosticSettings(saved);
+      setNotice(`Operational imaging orders ${enabled ? "enabled" : "disabled"}.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update imaging settings."); }
+    finally { setBusy(false); }
+  };
 
   return <div className="w-full">
     <h1 className="font-serif text-xl font-semibold">Clinic configuration</h1>
@@ -138,6 +158,33 @@ export default function SettingsPage() {
       <div className="mt-4 grid gap-4 border-t border-border pt-4 lg:grid-cols-2">
         <form onSubmit={addBlockedPeriod} className="settings-grid"><h3 className="font-semibold sm:col-span-2">Block practitioner time</h3><Field label="Practitioner"><PractitionerSelect practitioners={practitioners} value={blockedForm.practitionerId} onChange={(practitionerId) => setBlockedForm({ ...blockedForm, practitionerId })} /></Field><Field label="Reason"><input required value={blockedForm.reason} onChange={(event) => setBlockedForm({ ...blockedForm, reason: event.target.value })} className="input" /></Field><Field label="Starts"><input required type="datetime-local" value={blockedForm.startsAt} onChange={(event) => setBlockedForm({ ...blockedForm, startsAt: event.target.value })} className="input" /></Field><Field label="Ends"><input required type="datetime-local" value={blockedForm.endsAt} onChange={(event) => setBlockedForm({ ...blockedForm, endsAt: event.target.value })} className="input" /></Field><Submit busy={busy}>Add blocked time</Submit></form>
         <form onSubmit={addHoliday} className="settings-grid"><h3 className="font-semibold sm:col-span-2">Add clinic holiday</h3><Field label="Clinic"><ClinicSelect clinics={clinics} value={holidayForm.clinicId} onChange={(clinicId) => setHolidayForm({ ...holidayForm, clinicId })} /></Field><Field label="Holiday name"><input required value={holidayForm.name} onChange={(event) => setHolidayForm({ ...holidayForm, name: event.target.value })} className="input" /></Field><Field label="Date"><input required type="date" value={holidayForm.date} onChange={(event) => setHolidayForm({ ...holidayForm, date: event.target.value })} className="input" /></Field><Submit busy={busy}>Add holiday</Submit></form>
+      </div>
+    </Section>
+
+    <Section title="Diagnostic order capabilities">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold">Operational diagnostic orders</p>
+          <p className="mt-1 max-w-3xl text-sm text-inkSoft">Enable this only when the hospital has a laboratory or diagnostic department that can receive and process operational orders. Doctors can still record tests under Tests ordered when this is disabled.</p>
+          <p className={`mt-2 text-xs font-bold ${diagnosticSettings.operationalDiagnosticOrdersEnabled ? "text-accentDark" : "text-inkSoft"}`}>{diagnosticSettings.operationalDiagnosticOrdersEnabled ? "Enabled for this hospital" : "Disabled by default"}</p>
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-3 self-start sm:self-center">
+          <span className="text-sm font-semibold">{diagnosticSettings.operationalDiagnosticOrdersEnabled ? "On" : "Off"}</span>
+          <input type="checkbox" role="switch" aria-label="Enable operational diagnostic orders" checked={diagnosticSettings.operationalDiagnosticOrdersEnabled} disabled={busy} onChange={(event) => void updateDiagnosticOrders(event.target.checked)} className="peer sr-only" />
+          <span className="relative h-7 w-12 rounded-full bg-[#C8C3B8] transition peer-checked:bg-accent peer-disabled:opacity-50 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
+        </label>
+      </div>
+      <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold">Operational imaging orders (HL7 / modality worklist)</p>
+          <p className="mt-1 max-w-3xl text-sm text-inkSoft">Enable this only when the hospital has radiology equipment or a connected modality worklist that can receive HL7 orders. Doctors can still record requested scans under Imaging ordered when this is disabled.</p>
+          <p className={`mt-2 text-xs font-bold ${diagnosticSettings.operationalImagingOrdersEnabled ? "text-accentDark" : "text-inkSoft"}`}>{diagnosticSettings.operationalImagingOrdersEnabled ? "Enabled for this hospital" : "Disabled by default"}</p>
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-3 self-start sm:self-center">
+          <span className="text-sm font-semibold">{diagnosticSettings.operationalImagingOrdersEnabled ? "On" : "Off"}</span>
+          <input type="checkbox" role="switch" aria-label="Enable operational imaging orders" checked={diagnosticSettings.operationalImagingOrdersEnabled} disabled={busy} onChange={(event) => void updateImagingOrders(event.target.checked)} className="peer sr-only" />
+          <span className="relative h-7 w-12 rounded-full bg-[#C8C3B8] transition peer-checked:bg-accent peer-disabled:opacity-50 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5" />
+        </label>
       </div>
     </Section>
 
