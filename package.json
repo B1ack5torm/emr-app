@@ -10,6 +10,7 @@
     "test": "tsx --test tests/*.test.ts",
     "test:integration": "tsx --env-file=.env --test tests/database.integration.ts",
     "mllp:mock": "tsx scripts/mock-mllp-receiver.ts",
+    "mwl:start": "tsx --env-file=.env scripts/dicom-mwl-server.ts",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "prisma:seed": "tsx prisma/seed.ts"
@@ -20,6 +21,7 @@
   "dependencies": {
     "@prisma/client": "^5.18.0",
     "bcryptjs": "^2.4.3",
+    "dcmjs-dimse": "^0.3.3",
     "lucide-react": "^0.383.0",
     "next": "14.2.5",
     "next-auth": "^4.24.7",

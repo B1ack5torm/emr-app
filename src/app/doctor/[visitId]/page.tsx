@@ -8,6 +8,7 @@ import { F, AllergyBanner } from "@/components/shared";
 
 type SafetyWarning = { index: number; code: "ALLERGY" | "DUPLICATE_THERAPY" | "INTERACTION"; severity: string; message: string };
 type Rx = { medicine: string; dosage: string; frequency: string; duration: string; allergyWarningAcknowledged?: boolean; interactionOverrideReason?: string; safetyWarnings?: SafetyWarning[] };
+type LabTestOption = { code: string; name: string; category: string; aliases: string[] };
 
 export default function ConsultPage({ params }: { params: { visitId: string } }) {
   const router = useRouter();
@@ -19,6 +20,9 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [rx, setRx] = useState<Rx[]>([]);
   const [tests, setTests] = useState<string[]>([]);
   const [testDraft, setTestDraft] = useState("");
+  const [labTests, setLabTests] = useState<LabTestOption[]>([]);
+  const [labTestTotal, setLabTestTotal] = useState(0);
+  const [showTestSuggestions, setShowTestSuggestions] = useState(false);
   const [signConfirmed, setSignConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [pastVisits, setPastVisits] = useState<any[]>([]);
@@ -37,12 +41,40 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     });
   }, [params.visitId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/lab-tests").then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load laboratory tests.");
+      return data;
+    }).then((data) => {
+      if (!cancelled) { setLabTests(data.tests || []); setLabTestTotal(data.total || 0); }
+    }).catch(() => { /* Free-text entry remains available if the catalog cannot load. */ });
+    return () => { cancelled = true; };
+  }, []);
+
   if (!visit) return <div className="text-inkSoft">Loading chart…</div>;
 
   const addRx = () => setRx([...rx, { medicine: "", dosage: "", frequency: "", duration: "" }]);
   const updateRx = (i: number, field: keyof Rx, val: any) => setRx(rx.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)));
   const removeRx = (i: number) => setRx(rx.filter((_, idx) => idx !== i));
-  const addTest = () => { if (testDraft.trim()) { setTests([...tests, testDraft.trim()]); setTestDraft(""); } };
+  const addTest = (name = testDraft) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    if (!tests.some((test) => test.toLocaleLowerCase() === cleanName.toLocaleLowerCase())) setTests([...tests, cleanName]);
+    setTestDraft("");
+    setShowTestSuggestions(false);
+  };
+
+  const testSuggestions = (() => {
+    const terms = testDraft.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+    return labTests.filter((test) => {
+      if (tests.some((selected) => selected.toLocaleLowerCase() === test.name.toLocaleLowerCase())) return false;
+      if (!terms.length) return true;
+      const haystack = `${test.name} ${test.category} ${test.aliases.join(" ")}`.toLocaleLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    }).slice(0, 12);
+  })();
 
   const save = async (complete: boolean) => {
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
@@ -142,13 +174,23 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-inkSoft uppercase mb-2"><FlaskConical size={14} /> Tests ordered</div>
-          <div className="flex gap-2">
-            <input value={testDraft} onChange={(e) => setTestDraft(e.target.value)}
+          <div className="flex items-start gap-2">
+            <div className="relative flex-1">
+            <input value={testDraft} onChange={(e) => { setTestDraft(e.target.value); setShowTestSuggestions(true); }}
+              onFocus={() => setShowTestSuggestions(true)}
+              onBlur={() => window.setTimeout(() => setShowTestSuggestions(false), 150)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTest(); } }}
-              onBlur={addTest}
-              placeholder="e.g. Complete Blood Count" className="input flex-1" />
-            <button type="button" onClick={addTest} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><Plus size={14} /> Add</button>
+              placeholder="Search CBC, thyroid, culture, vitamin, genetic test…" className="input" role="combobox" aria-expanded={showTestSuggestions} aria-controls="lab-test-suggestions" autoComplete="off" />
+            {showTestSuggestions && labTests.length > 0 && <div id="lab-test-suggestions" className="absolute z-30 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-border bg-white shadow-xl" role="listbox">
+              {testSuggestions.length > 0 ? testSuggestions.map((test) => <button key={test.code} type="button" role="option" aria-selected="false" onMouseDown={(event) => event.preventDefault()} onClick={() => addTest(test.name)} className="block w-full border-b border-border px-3 py-2 text-left last:border-0 hover:bg-accentSoft">
+                <span className="block text-sm font-semibold text-ink">{test.name}</span>
+                <span className="block text-[11px] text-inkSoft">{test.category}{test.aliases.length ? ` · ${test.aliases.slice(0, 3).join(", ")}` : ""}</span>
+              </button>) : <div className="px-3 py-3 text-sm text-inkSoft">No catalog match. Press Enter or Add to use the typed test name.</div>}
+            </div>}
+            </div>
+            <button type="button" onClick={() => addTest()} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><Plus size={14} /> Add</button>
           </div>
+          <p className="mt-1.5 text-xs text-inkSoft">{labTestTotal ? `${labTestTotal} laboratory tests available. ` : ""}Search by test name, profile, category, or abbreviation. Free-text tests are also accepted.</p>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {tests.map((t, i) => (
               <span key={i} className="inline-flex items-center gap-1.5 bg-accentSoft text-accentDark px-2.5 py-1 rounded-full text-xs font-semibold">

@@ -13,7 +13,8 @@ export function imagingOrderStatusForAck(code: string): "SENT" | "FAILED" {
 
 export function newAccessionNumber(now = new Date()) {
   const date = now.toISOString().slice(0, 10).replaceAll("-", "");
-  return `ACC-${date}-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  // DICOM (0008,0050) Accession Number uses VR SH, whose maximum length is 16.
+  return `CC${date}${randomUUID().replaceAll("-", "").slice(0, 6).toUpperCase()}`;
 }
 
 export function newMessageControlId() {

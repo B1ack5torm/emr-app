@@ -12,7 +12,7 @@ The current schema preserves legacy CUID primary keys. New work should retain se
 
 ## Integration boundaries
 
-`src/lib/hl7.ts` and `src/lib/mllp.ts` are local transport/adaptor seams for future HL7/MLLP work. Imaging uses a local order workflow only. No PACS, DICOM, ABDM, payment, or messaging production integration is enabled.
+`src/lib/hl7.ts` and `src/lib/mllp.ts` implement the outbound HL7 ORM/MLLP boundary. `scripts/dicom-mwl-server.ts` is an integration-test MWL SCP that exposes only Mirth-acknowledged imaging orders from PostgreSQL through DICOM C-ECHO/C-FIND. It is a persistent LAN-side process, not part of the Next.js request runtime, and is not presented as a supported production PACS component. No PACS image storage, ABDM, payment, or messaging production integration is enabled.
 
 `src/lib/domain/diagnostics.ts` defines ADT/ORM/ORU, modality-worklist, and PACS adapter seams with a no-network local implementation. `src/lib/document-storage.ts` defines storage and malware-scanner interfaces; development uses private local filesystem storage, while production requires an object-storage and real scanning adapter.
 

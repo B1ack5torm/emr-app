@@ -80,7 +80,7 @@ export function buildORM(input: ORMInput) {
   obrFields[2] = escapeHL7(order.accessionNumber);
   obrFields[3] = `${escapeHL7(order.procedureCode)}^${escapeHL7(procedureDescription)}`;
   obrFields[12] = escapeHL7(order.clinicalIndication);
-  obrFields[18] = escapeHL7(input.stationAeTitle || "DG_HARVESTER");
+  obrFields[18] = escapeHL7(input.stationAeTitle || "CARECHART_MODALITY");
   obrFields[19] = modalityCode(order.modality);
   obrFields[26] = `^^^${timestamp}`;
   const obr = `OBR|${obrFields.join("|")}`;

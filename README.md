@@ -89,6 +89,20 @@ Apply committed migrations in a deployed environment with `npx prisma migrate de
 
 Set `MLLP_HOST=127.0.0.1` and `MLLP_PORT=2575`, then start the local receiver with `npm run mllp:mock`. It stores each correctly framed ORM message under `storage/mllp-mock` and returns `AA` by default. Set `MOCK_MLLP_ACK_CODE` to `AE` or `AR` to exercise failure handling; raw HL7 is stored but never printed to the terminal.
 
+### Mirth and DICOM Modality Worklist
+
+CareChart sends an `ORM^O01` order to Mirth over MLLP. An order becomes visible through the bundled MWL SCP only after Mirth returns an `AA` acknowledgement, so rejected or failed transmissions are not offered to modalities.
+
+1. In Mirth Connect, create a channel with an **LLP Listener** source connector, `MLLP` transmission mode, and HL7 v2.x inbound data type. Bind it to an available port such as `6661` and configure the source response to return a generated HL7 ACK. Restrict the channel to `ORM^O01` messages and return `AE`/`AR` for messages that do not pass validation.
+2. Point `MLLP_HOST` and `MLLP_PORT` in `.env` at the Mirth server and channel port. Keep the receiver application/facility values aligned with the channel.
+3. Start the web app, then start the LAN-side MWL process with `npm run mwl:start`. This long-running TCP process must run on a server that can reach the same PostgreSQL database; it cannot run in a request-only/serverless runtime.
+4. Configure the tester/modality with calling AE `EMR_APP`, called/server AE `CARECHART_MWL`, the CareChart MWL host's LAN IP, and port `11112`. Leave Station AET blank or query the configured `MWL_STATION_AETITLE` (`CARECHART_MODALITY` by default).
+5. Place an imaging order from an active encounter. After Mirth responds `AA`, query the order's scheduled date. Appointment time is used when present; otherwise the order creation time is used.
+
+The MWL endpoint supports C-ECHO and MWL C-FIND with patient name/ID, accession, requested procedure, modality, station AE/name, wildcard matching, and scheduled-date ranges. Set `DICOM_MWL_ALLOWED_CALLING_AETS` to a comma-separated allowlist in shared environments. This integration is self-contained and does not require an external image-sharing gateway.
+
+The bundled JavaScript DIMSE stack describes itself as work in progress. Use this service for integration and acceptance testing; validate a supported production MWL implementation and the full workflow with the hospital's PACS/vendor before clinical deployment.
+
 ## Quality checks
 
 ```bash
