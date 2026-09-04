@@ -132,44 +132,45 @@ enum AppointmentRequestStatus {
 }
 
 model Organization {
-  id                                      String                  @id @default(cuid())
-  name                                    String
-  slug                                    String                  @unique
-  operationalDiagnosticOrdersEnabled     Boolean                 @default(false)
-  operationalImagingOrdersEnabled        Boolean                 @default(false)
-  createdAt                               DateTime                @default(now())
-  users                  User[]
-  patients               Patient[]
-  invites                Invite[]
-  invoices               Invoice[]
-  appointments           Appointment[]
-  appointmentRequests    AppointmentRequest[]
-  auditEvents            AuditEvent[]
-  consents               Consent[]
-  privacyRequests        PrivacyRequest[]
-  loginAttempts          LoginAttempt[]
-  clinics                ClinicLocation[]
-  departments            Department[]
-  practitionerProfiles   PractitionerProfile[]
-  blockedPeriods         BlockedPeriod[]
-  holidays               Holiday[]
-  appointmentTypes       AppointmentType[]
-  diagnosticOrders       DiagnosticOrder[]
-  serviceCatalog         ServiceCatalogItem[]
-  clinicPrices           ClinicPrice[]
-  taxConfigurations      TaxConfiguration[]
-  refunds                Refund[]
-  documents              StoredDocument[]
-  patientIdentifiers     PatientIdentifier[]
-  patientMergeRecords    PatientMergeRecord[]
-  clinicalProblems       ClinicalProblem[]
-  medicationStatements   MedicationStatement[]
-  immunizationRecords    ImmunizationRecord[]
-  patientProcedures      PatientProcedure[]
-  clinicalFlags          ClinicalFlag[]
-  diagnosticObservations DiagnosticObservation[]
-  pharmacyOrders         PharmacyOrder[]
-  pharmacyInvoices       PharmacyInvoice[]
+  id                                 String                  @id @default(cuid())
+  name                               String
+  slug                               String                  @unique
+  onlineBookingEnabled               Boolean                 @default(false)
+  operationalDiagnosticOrdersEnabled Boolean                 @default(false)
+  operationalImagingOrdersEnabled    Boolean                 @default(false)
+  createdAt                          DateTime                @default(now())
+  users                              User[]
+  patients                           Patient[]
+  invites                            Invite[]
+  invoices                           Invoice[]
+  appointments                       Appointment[]
+  appointmentRequests                AppointmentRequest[]
+  auditEvents                        AuditEvent[]
+  consents                           Consent[]
+  privacyRequests                    PrivacyRequest[]
+  loginAttempts                      LoginAttempt[]
+  clinics                            ClinicLocation[]
+  departments                        Department[]
+  practitionerProfiles               PractitionerProfile[]
+  blockedPeriods                     BlockedPeriod[]
+  holidays                           Holiday[]
+  appointmentTypes                   AppointmentType[]
+  diagnosticOrders                   DiagnosticOrder[]
+  serviceCatalog                     ServiceCatalogItem[]
+  clinicPrices                       ClinicPrice[]
+  taxConfigurations                  TaxConfiguration[]
+  refunds                            Refund[]
+  documents                          StoredDocument[]
+  patientIdentifiers                 PatientIdentifier[]
+  patientMergeRecords                PatientMergeRecord[]
+  clinicalProblems                   ClinicalProblem[]
+  medicationStatements               MedicationStatement[]
+  immunizationRecords                ImmunizationRecord[]
+  patientProcedures                  PatientProcedure[]
+  clinicalFlags                      ClinicalFlag[]
+  diagnosticObservations             DiagnosticObservation[]
+  pharmacyOrders                     PharmacyOrder[]
+  pharmacyInvoices                   PharmacyInvoice[]
 }
 
 model User {
@@ -251,6 +252,7 @@ model PractitionerProfile {
   registrationNumber        String?
   defaultAppointmentMinutes Int                    @default(30)
   active                    Boolean                @default(true)
+  acceptsOnlineAppointments Boolean                @default(false)
   schedules                 PractitionerSchedule[]
   blockedPeriods            BlockedPeriod[]
 
@@ -597,8 +599,8 @@ model ClinicalFlag {
 }
 
 model Visit {
-  id                      String               @id @default(cuid())
-  status                  VisitStatus          @default(WAITING)
+  id                      String                  @id @default(cuid())
+  status                  VisitStatus             @default(WAITING)
   chiefComplaint          String?
   bp                      String?
   temperature             String?
@@ -608,18 +610,18 @@ model Visit {
   doctorNotes             String?
   advice                  String?
   signedAt                DateTime?
-  createdAt               DateTime             @default(now())
-  patient                 Patient              @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdAt               DateTime                @default(now())
+  patient                 Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId               String
-  doctor                  User?                @relation("DoctorVisits", fields: [doctorId], references: [id], onDelete: SetNull)
+  doctor                  User?                   @relation("DoctorVisits", fields: [doctorId], references: [id], onDelete: SetNull)
   doctorId                String?
   prescriptions           Prescription[]
   testsOrdered            TestOrder[]
   imagingRecommendations  ImagingRecommendation[]
   imagingOrders           ImagingOrder[]
   invoice                 Invoice?
-  appointment             Appointment?         @relation("AppointmentVisit", fields: [appointmentId], references: [id])
-  appointmentId           String?              @unique
+  appointment             Appointment?            @relation("AppointmentVisit", fields: [appointmentId], references: [id])
+  appointmentId           String?                 @unique
   reasonForVisit          String?
   historyOfPresentIllness String?
   pastMedicalHistory      String?
@@ -633,7 +635,7 @@ model Visit {
   followUpDate            DateTime?
   referralNotes           String?
   privateNote             String?
-  version                 Int                  @default(1)
+  version                 Int                     @default(1)
   vitals                  VitalSign[]
   diagnoses               DiagnosisEntry[]
   amendments              EncounterAmendment[]
@@ -880,13 +882,13 @@ model TestOrder {
 }
 
 model ImagingRecommendation {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   code        String?
   name        String
   modality    String
   bodyPart    String?
   description String
-  visit       Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  visit       Visit   @relation(fields: [visitId], references: [id], onDelete: Cascade)
   visitId     String
 
   @@index([visitId])

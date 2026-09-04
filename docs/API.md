@@ -5,7 +5,7 @@ All authenticated endpoints use the NextAuth HTTP-only session cookie. Tenant id
 ## Core resources
 
 - `/api/settings/clinics`, `/api/settings/practitioners`, `/api/settings/schedules`: clinic hierarchy, practitioner profiles, working periods, breaks, blocks, and holidays.
-- `/api/public/appointments` and `/availability`: public idempotent booking and schedule-aware availability.
+- `/api/public/appointments?hospital={slug}` and `/availability?hospital={slug}`: public idempotent booking and schedule-aware availability. The hospital and practitioner must explicitly opt in, and the practitioner must have an active configured schedule. Appointment POST bodies use `hospitalSlug`; client-supplied organization IDs are not accepted.
 - `/api/diagnostic-orders` and `/api/diagnostic-orders/{id}`: paginated laboratory/imaging orders, results, status transitions, and review acknowledgement.
 - `/api/patients/duplicates`, `/api/patients/merge`, and `/api/patients/{id}/identifiers`: patient identity matching, administrator-controlled merge, and external/MRN identifier management.
 - `/api/patients/{id}/clinical-summary`: longitudinal allergies, problems, medication statements, immunizations, procedures, safety flags, observations, and encounters.

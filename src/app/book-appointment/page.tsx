@@ -5,13 +5,15 @@ import Link from "next/link";
 import { ArrowLeft, CalendarCheck2, CheckCircle2, Clock3, Stethoscope, UserRound } from "lucide-react";
 
 type AppointmentType = { id: string; name: string; durationMinutes: number };
-type Doctor = { id: string; name: string; organizationId: string; organization: { name: string }; practitionerProfile?: { specialty: string; clinic: { id: string; name: string; appointmentTypes: AppointmentType[] } } };
+type Doctor = { id: string; name: string; organization: { name: string; slug: string }; practitionerProfile?: { specialty: string; clinic: { id: string; name: string; appointmentTypes: AppointmentType[] } } };
 type Visitor = { name: string; email: string; phone: string; reason: string };
 type Confirmation = { doctor: Doctor; date: string; time: string; bookingReference: string };
 
 const isoDate = (date: Date) => date.toLocaleDateString("en-CA");
 
 export default function PublicAppointmentPage() {
+  const [hospitalSlug, setHospitalSlug] = useState("");
+  const [linkChecked, setLinkChecked] = useState(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [doctorId, setDoctorId] = useState("");
   const [clinicId, setClinicId] = useState("");
@@ -35,22 +37,29 @@ export default function PublicAppointmentPage() {
   const maxDate = new Date(); maxDate.setDate(maxDate.getDate() + 30);
 
   useEffect(() => {
-    fetch("/api/public/appointments").then(async (response) => {
+    const hospital = new URLSearchParams(window.location.search).get("hospital")?.trim().toLowerCase() || "";
+    setHospitalSlug(hospital);
+    setLinkChecked(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hospitalSlug) return;
+    fetch(`/api/public/appointments?hospital=${encodeURIComponent(hospitalSlug)}`).then(async (response) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setDoctors(data);
-    }).catch(() => setError("Could not load available doctors."));
-  }, []);
+    }).catch((reason) => setError(reason.message || "Could not load available doctors."));
+  }, [hospitalSlug]);
 
   useEffect(() => {
     setTime(""); setSlots([]);
     if (!doctorId || !date) return;
     setLoadingSlots(true); setError("");
-    fetch(`/api/public/appointments/availability?doctorId=${encodeURIComponent(doctorId)}&date=${date}&appointmentTypeId=${encodeURIComponent(appointmentTypeId)}`)
+    fetch(`/api/public/appointments/availability?hospital=${encodeURIComponent(hospitalSlug)}&doctorId=${encodeURIComponent(doctorId)}&date=${date}&appointmentTypeId=${encodeURIComponent(appointmentTypeId)}`)
       .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setSlots(data.slots); })
       .catch((reason) => setError(reason.message || "Could not load available times."))
       .finally(() => setLoadingSlots(false));
-  }, [doctorId, date, appointmentTypeId]);
+  }, [hospitalSlug, doctorId, date, appointmentTypeId]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -62,7 +71,7 @@ export default function PublicAppointmentPage() {
       const response = await fetch("/api/public/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current },
-        body: JSON.stringify({ ...visitor, doctorId, organizationId: doctor.organizationId, appointmentTypeId: appointmentTypeId || undefined, date, time, privacyAccepted }),
+        body: JSON.stringify({ ...visitor, hospitalSlug, doctorId, appointmentTypeId: appointmentTypeId || undefined, date, time, privacyAccepted }),
       });
       const data = await response.json();
       if (!response.ok) { if (response.status === 409) setTime(""); throw new Error(data.error || "Could not confirm the appointment."); }
@@ -77,7 +86,7 @@ export default function PublicAppointmentPage() {
   return <div className="-mx-6 -my-6 min-h-screen bg-[#F4F7F4] px-5 py-8 text-[#193E34] sm:px-8">
     <div className="mx-auto max-w-5xl">
       <header className="flex items-center justify-between"><Link href="/" className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#24705D] text-white"><Stethoscope size={20} /></span><span className="font-serif text-xl font-bold">EMR App</span></Link><Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-[#41675C]"><ArrowLeft size={15} /> Back home</Link></header>
-      {complete ? <Success complete={complete} /> : <div className="mt-12 grid gap-8 lg:grid-cols-[.75fr_1.25fr]">
+      {!linkChecked ? <p className="mt-16 text-center text-[#60776E]">Loading booking page...</p> : !hospitalSlug ? <div className="mx-auto mt-16 max-w-xl rounded-2xl border border-[#D7E3DD] bg-white p-8 text-center shadow-xl shadow-[#214F43]/8"><CalendarCheck2 size={42} className="mx-auto text-[#24705D]" /><h1 className="mt-4 font-serif text-3xl font-bold">Hospital booking link required</h1><p className="mt-3 text-[#60776E]">Open the appointment link from your hospital website. Each link identifies one hospital and prevents appointments from crossing between organizations.</p><Link href="/" className="mt-6 inline-block rounded-lg bg-[#24705D] px-5 py-2.5 text-sm font-bold text-white">Return home</Link></div> : complete ? <Success complete={complete} /> : <div className="mt-12 grid gap-8 lg:grid-cols-[.75fr_1.25fr]">
         <aside><p className="text-xs font-bold uppercase tracking-[.16em] text-[#28725E]">Online appointment</p><h1 className="mt-3 font-serif text-4xl font-bold leading-tight">Choose a doctor and request a convenient time.</h1><p className="mt-4 leading-7 text-[#60776E]">Share your contact details and reason for visiting. The doctor will review your request before the appointment is confirmed.</p><div className="mt-8 space-y-3">{[[UserRound, "Choose an available doctor"], [CalendarCheck2, "Pick an open date and time"], [CheckCircle2, "Send your request for approval"]].map(([Icon, text]: any, index) => <div key={text} className="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E5F2EC] text-sm font-bold text-[#24705D]">{index + 1}</span><Icon size={17} className="text-[#24705D]" /><span className="text-sm font-bold">{text}</span></div>)}</div></aside>
         <form onSubmit={submit} className="rounded-2xl border border-[#D7E3DD] bg-white p-5 shadow-xl shadow-[#214F43]/8 sm:p-7">
           <div className="grid gap-5 sm:grid-cols-2">

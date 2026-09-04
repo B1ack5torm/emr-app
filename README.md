@@ -55,7 +55,17 @@ openssl rand -base64 32
 npx prisma migrate dev --name init
 ```
 
-## 4. Seed demo staff accounts
+## 4. Create the first platform administrator
+
+Set `BOOTSTRAP_SUPER_ADMIN_NAME`, `BOOTSTRAP_SUPER_ADMIN_EMAIL`, and a strong `BOOTSTRAP_SUPER_ADMIN_PASSWORD` in `.env`, then run:
+
+```bash
+npm run bootstrap:super-admin
+```
+
+This is a one-time, fail-closed command: it refuses to create a second super administrator and never prints the password. Sign in with that account, open **Admin**, and create the Nexus Care Hospital organization and its hospital administrator.
+
+## 5. Optional: seed demo staff accounts
 
 ```bash
 npm run prisma:seed
@@ -63,7 +73,7 @@ npm run prisma:seed
 
 The seed is development-only and currently creates fictional staff with a known temporary password. Set a unique local seed password before any shared deployment; never use demo accounts or data in production.
 
-## 5. Run it
+## 6. Run it
 
 ```bash
 npm run dev
@@ -73,11 +83,21 @@ Visit `http://localhost:3000`, sign in, and try the flow: register a patient at
 Front Desk → see them appear in the Doctor's Desk queue → complete a consultation
 → find the full record under Patient Records.
 
+### Connect a hospital website to appointment booking
+
+After creating the hospital, sign in as its administrator and configure a clinic, doctor profile, appointment type, and weekly schedule under **Settings**. Opt the doctor into online appointments, then enable hospital-wide online booking. The settings page displays the tenant-specific link:
+
+```text
+https://your-emr-domain.example/book-appointment?hospital=nexus-care-hospital
+```
+
+Use that URL for the **Book appointment** button on the Nexus Care Hospital website. Public APIs derive the organization from the slug; the browser cannot submit an organization ID. Hospitals and doctors are hidden by default, and no appointment slots are invented when a schedule has not been configured.
+
 ## Deploying
 
 - **App**: push this repo to GitHub and import it into [Vercel](https://vercel.com) or [Railway](https://railway.app). Set the same environment variables there.
 - **Database**: use the hosted Postgres URL from Neon/Supabase/RDS as `DATABASE_URL` in production too.
-- After deploying, run `npx prisma migrate deploy` (instead of `migrate dev`) against the production database, then run the seed script once.
+- After deploying, run `npx prisma migrate deploy` (instead of `migrate dev`) against the production database, then run the one-time super-administrator bootstrap command. The demo seed is optional and must not be used in production.
 
 ## Operations
 

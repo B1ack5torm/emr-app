@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "tsx --test tests/*.test.ts",
     "test:integration": "tsx --env-file=.env --test tests/database.integration.ts",
+    "bootstrap:super-admin": "tsx --env-file=.env scripts/bootstrap-super-admin.ts",
     "mllp:mock": "tsx scripts/mock-mllp-receiver.ts",
     "mwl:start": "tsx --env-file=.env scripts/dicom-mwl-server.ts",
     "typecheck": "tsc --noEmit",

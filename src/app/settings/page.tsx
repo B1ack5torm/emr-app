@@ -7,10 +7,11 @@ type AppointmentType = { id: string; name: string; durationMinutes: number };
 type Clinic = { id: string; name: string; code: string; address?: string; timezone: string; departments: Department[]; appointmentTypes: AppointmentType[] };
 type Doctor = { id: string; name: string };
 type Schedule = { id: string; dayOfWeek: number; startMinute: number; endMinute: number; appointmentMinutes: number; breaks: { id: string; startMinute: number; endMinute: number; label?: string }[] };
-type Practitioner = { id: string; user: Doctor & { email: string }; clinic: Clinic; department?: Department; specialty: string; qualification?: string; schedules: Schedule[] };
+type Practitioner = { id: string; user: Doctor & { email: string }; clinic: Clinic; department?: Department; specialty: string; qualification?: string; acceptsOnlineAppointments: boolean; schedules: Schedule[] };
 type Service = { id: string; code: string; name: string; category: string; taxable: boolean; prices: { id: string; unitPrice: number; clinic: { id: string; name: string } }[] };
 type Tax = { id: string; name: string; ratePercent: number; clinic: { id: string; name: string }; effectiveFrom?: string };
 type DiagnosticSettings = { operationalDiagnosticOrdersEnabled: boolean; operationalImagingOrdersEnabled: boolean };
+type OnlineBookingSettings = { onlineBookingEnabled: boolean; slug: string };
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const CATEGORIES = ["CONSULTATION", "MEDICINE", "TEST", "IMAGING", "OTHER"];
@@ -40,12 +41,13 @@ export default function SettingsPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [diagnosticSettings, setDiagnosticSettings] = useState<DiagnosticSettings>({ operationalDiagnosticOrdersEnabled: false, operationalImagingOrdersEnabled: false });
+  const [onlineBookingSettings, setOnlineBookingSettings] = useState<OnlineBookingSettings>({ onlineBookingEnabled: false, slug: "" });
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [clinicForm, setClinicForm] = useState({ name: "", code: "", address: "", timezone: "Asia/Kolkata" });
   const [childForm, setChildForm] = useState({ clinicId: "", kind: "department", name: "", durationMinutes: "30" });
-  const [practitionerForm, setPractitionerForm] = useState({ userId: "", clinicId: "", departmentId: "", specialty: "", qualification: "", registrationNumber: "", defaultAppointmentMinutes: "30" });
+  const [practitionerForm, setPractitionerForm] = useState({ userId: "", clinicId: "", departmentId: "", specialty: "", qualification: "", registrationNumber: "", defaultAppointmentMinutes: "30", acceptsOnlineAppointments: false });
   const [scheduleForm, setScheduleForm] = useState({ practitionerId: "", dayOfWeek: "1", start: "09:00", end: "17:00", appointmentMinutes: "30", breakStart: "13:00", breakEnd: "14:00" });
   const [scheduleBreakEnabled, setScheduleBreakEnabled] = useState(true);
   const [blockedForm, setBlockedForm] = useState({ practitionerId: "", startsAt: "", endsAt: "", reason: "" });
@@ -56,11 +58,11 @@ export default function SettingsPage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const [clinicData, doctorData, practitionerData, serviceData, taxData, diagnosticsData] = await Promise.all([
+      const [clinicData, doctorData, practitionerData, serviceData, taxData, diagnosticsData, onlineBookingData] = await Promise.all([
         requestJson("/api/settings/clinics"), requestJson("/api/doctors"), requestJson("/api/settings/practitioners"),
-        requestJson("/api/settings/billing"), requestJson("/api/settings/taxes"), requestJson("/api/settings/diagnostics"),
+        requestJson("/api/settings/billing"), requestJson("/api/settings/taxes"), requestJson("/api/settings/diagnostics"), requestJson("/api/settings/online-booking"),
       ]);
-      setClinics(clinicData); setDoctors(doctorData); setPractitioners(practitionerData); setServices(serviceData); setTaxes(taxData); setDiagnosticSettings(diagnosticsData);
+      setClinics(clinicData); setDoctors(doctorData); setPractitioners(practitionerData); setServices(serviceData); setTaxes(taxData); setDiagnosticSettings(diagnosticsData); setOnlineBookingSettings(onlineBookingData);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load settings."); }
   }, []);
 
@@ -96,6 +98,15 @@ export default function SettingsPage() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update diagnostic settings."); }
     finally { setBusy(false); }
   };
+  const updateOnlineBooking = async (enabled: boolean) => {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const saved = await requestJson("/api/settings/online-booking", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ onlineBookingEnabled: enabled }) });
+      setOnlineBookingSettings(saved);
+      setNotice(`Online appointment booking ${enabled ? "enabled" : "disabled"}.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update online booking."); }
+    finally { setBusy(false); }
+  };
   const updateImagingOrders = async (enabled: boolean) => {
     setBusy(true); setError(""); setNotice("");
     try {
@@ -111,6 +122,13 @@ export default function SettingsPage() {
     <p className="mt-1 text-sm text-inkSoft">Configure care locations, clinician availability, billable services, and tax rules.</p>
     {error && <p className="mt-4 rounded-lg bg-alertSoft px-3 py-2 text-sm text-alert">{error}</p>}
     {notice && <p className="mt-4 rounded-lg bg-accentSoft px-3 py-2 text-sm text-accentDark">{notice}</p>}
+
+    <Section title="Online appointment booking">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><p className="font-semibold">Accept bookings from the hospital website</p><p className="mt-1 text-sm text-inkSoft">Keep this off until practitioner profiles and weekly schedules are verified. Only opted-in doctors with an active schedule are shown.</p>{onlineBookingSettings.slug && <p className="mt-2 font-mono text-xs text-inkSoft">/book-appointment?hospital={onlineBookingSettings.slug}</p>}</div>
+        <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={onlineBookingSettings.onlineBookingEnabled} disabled={busy} onChange={(event) => void updateOnlineBooking(event.target.checked)} /> Enabled</label>
+      </div>
+    </Section>
 
     <Section title="Locations and departments">
       <form onSubmit={createClinic} className="settings-grid">
@@ -138,6 +156,7 @@ export default function SettingsPage() {
         <Field label="Specialty"><input required value={practitionerForm.specialty} onChange={(event) => setPractitionerForm({ ...practitionerForm, specialty: event.target.value })} className="input" /></Field>
         <Field label="Qualification"><input value={practitionerForm.qualification} onChange={(event) => setPractitionerForm({ ...practitionerForm, qualification: event.target.value })} className="input" /></Field>
         <Field label="Registration number"><input value={practitionerForm.registrationNumber} onChange={(event) => setPractitionerForm({ ...practitionerForm, registrationNumber: event.target.value })} className="input" /></Field>
+        <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={practitionerForm.acceptsOnlineAppointments} onChange={(event) => setPractitionerForm({ ...practitionerForm, acceptsOnlineAppointments: event.target.checked })} /> Accept online appointments</label>
         <Submit busy={busy}>Save practitioner</Submit>
       </form>
       <form onSubmit={configureSchedule} className="settings-grid mt-4 border-t border-border pt-4">
@@ -154,7 +173,7 @@ export default function SettingsPage() {
         </div>
         <Submit busy={busy}>Save weekly schedule</Submit>
       </form>
-      <div className="mt-5 space-y-2">{practitioners.map((practitioner) => <div key={practitioner.id} className="rounded-lg border border-border p-3 text-sm"><p className="font-semibold">Dr. {practitioner.user.name} · {practitioner.specialty}</p><p className="text-xs text-inkSoft">{practitioner.clinic.name}{practitioner.department ? ` / ${practitioner.department.name}` : ""}</p><p className="mt-1 text-xs">{practitioner.schedules.map((schedule) => `${DAYS[schedule.dayOfWeek]} ${minuteLabel(schedule.startMinute)}–${minuteLabel(schedule.endMinute)} (${schedule.appointmentMinutes}m)`).join(" · ") || "No weekly hours configured"}</p></div>)}</div>
+      <div className="mt-5 space-y-2">{practitioners.map((practitioner) => <div key={practitioner.id} className="rounded-lg border border-border p-3 text-sm"><p className="font-semibold">Dr. {practitioner.user.name} · {practitioner.specialty}</p><p className="text-xs text-inkSoft">{practitioner.clinic.name}{practitioner.department ? ` / ${practitioner.department.name}` : ""} · Online booking {practitioner.acceptsOnlineAppointments ? "enabled" : "disabled"}</p><p className="mt-1 text-xs">{practitioner.schedules.map((schedule) => `${DAYS[schedule.dayOfWeek]} ${minuteLabel(schedule.startMinute)}–${minuteLabel(schedule.endMinute)} (${schedule.appointmentMinutes}m)`).join(" · ") || "No weekly hours configured"}</p></div>)}</div>
       <div className="mt-4 grid gap-4 border-t border-border pt-4 lg:grid-cols-2">
         <form onSubmit={addBlockedPeriod} className="settings-grid"><h3 className="font-semibold sm:col-span-2">Block practitioner time</h3><Field label="Practitioner"><PractitionerSelect practitioners={practitioners} value={blockedForm.practitionerId} onChange={(practitionerId) => setBlockedForm({ ...blockedForm, practitionerId })} /></Field><Field label="Reason"><input required value={blockedForm.reason} onChange={(event) => setBlockedForm({ ...blockedForm, reason: event.target.value })} className="input" /></Field><Field label="Starts"><input required type="datetime-local" value={blockedForm.startsAt} onChange={(event) => setBlockedForm({ ...blockedForm, startsAt: event.target.value })} className="input" /></Field><Field label="Ends"><input required type="datetime-local" value={blockedForm.endsAt} onChange={(event) => setBlockedForm({ ...blockedForm, endsAt: event.target.value })} className="input" /></Field><Submit busy={busy}>Add blocked time</Submit></form>
         <form onSubmit={addHoliday} className="settings-grid"><h3 className="font-semibold sm:col-span-2">Add clinic holiday</h3><Field label="Clinic"><ClinicSelect clinics={clinics} value={holidayForm.clinicId} onChange={(clinicId) => setHolidayForm({ ...holidayForm, clinicId })} /></Field><Field label="Holiday name"><input required value={holidayForm.name} onChange={(event) => setHolidayForm({ ...holidayForm, name: event.target.value })} className="input" /></Field><Field label="Date"><input required type="date" value={holidayForm.date} onChange={(event) => setHolidayForm({ ...holidayForm, date: event.target.value })} className="input" /></Field><Submit busy={busy}>Add holiday</Submit></form>
