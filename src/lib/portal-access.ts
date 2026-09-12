@@ -27,6 +27,10 @@ export function roleCanAccessArea(role: string | null | undefined, area: PortalA
   return !!role && rolesByArea[area].includes(role);
 }
 
+export function canDisplayPortalNavigation(mustChangePassword: boolean | null | undefined) {
+  return mustChangePassword === false;
+}
+
 export function portalAreaForPath(pathname: string): PortalArea | null {
   const area = pathname.split("/").filter(Boolean)[0] as PortalArea | undefined;
   return area && area in rolesByArea ? area : null;

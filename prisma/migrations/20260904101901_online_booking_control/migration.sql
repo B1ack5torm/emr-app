@@ -1,8 +1,13 @@
 -- CreateEnum
-CREATE TYPE "PharmacyOrderStatus" AS ENUM ('PENDING', 'DISPENSED');
+DO $$
+BEGIN
+    CREATE TYPE "PharmacyOrderStatus" AS ENUM ('PENDING', 'DISPENSED');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AlterEnum
-ALTER TYPE "Role" ADD VALUE 'PHARMACIST';
+ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'PHARMACIST';
 
 -- AlterTable
 ALTER TABLE "Allergy" ALTER COLUMN "updatedAt" DROP DEFAULT;
@@ -41,7 +46,7 @@ ALTER TABLE "PatientProcedure" ALTER COLUMN "updatedAt" DROP DEFAULT;
 ALTER TABLE "PrivacyRequest" ALTER COLUMN "updatedAt" DROP DEFAULT;
 
 -- CreateTable
-CREATE TABLE "PharmacyOrder" (
+CREATE TABLE IF NOT EXISTS "PharmacyOrder" (
     "id" TEXT NOT NULL,
     "status" "PharmacyOrderStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -54,7 +59,7 @@ CREATE TABLE "PharmacyOrder" (
 );
 
 -- CreateTable
-CREATE TABLE "PharmacyOrderItem" (
+CREATE TABLE IF NOT EXISTS "PharmacyOrderItem" (
     "id" TEXT NOT NULL,
     "medicine" TEXT NOT NULL,
     "dosage" TEXT,
@@ -66,7 +71,7 @@ CREATE TABLE "PharmacyOrderItem" (
 );
 
 -- CreateTable
-CREATE TABLE "PharmacyInvoice" (
+CREATE TABLE IF NOT EXISTS "PharmacyInvoice" (
     "id" TEXT NOT NULL,
     "invoiceNo" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,7 +87,7 @@ CREATE TABLE "PharmacyInvoice" (
 );
 
 -- CreateTable
-CREATE TABLE "PharmacyInvoiceItem" (
+CREATE TABLE IF NOT EXISTS "PharmacyInvoiceItem" (
     "id" TEXT NOT NULL,
     "invoiceId" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -97,43 +102,75 @@ CREATE TABLE "PharmacyInvoiceItem" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PharmacyOrder_visitId_key" ON "PharmacyOrder"("visitId");
+CREATE UNIQUE INDEX IF NOT EXISTS "PharmacyOrder_visitId_key" ON "PharmacyOrder"("visitId");
 
 -- CreateIndex
-CREATE INDEX "PharmacyOrder_organizationId_status_idx" ON "PharmacyOrder"("organizationId", "status");
+CREATE INDEX IF NOT EXISTS "PharmacyOrder_organizationId_status_idx" ON "PharmacyOrder"("organizationId", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PharmacyInvoice_pharmacyOrderId_key" ON "PharmacyInvoice"("pharmacyOrderId");
+CREATE UNIQUE INDEX IF NOT EXISTS "PharmacyInvoice_pharmacyOrderId_key" ON "PharmacyInvoice"("pharmacyOrderId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PharmacyInvoice_organizationId_invoiceNo_key" ON "PharmacyInvoice"("organizationId", "invoiceNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "PharmacyInvoice_organizationId_invoiceNo_key" ON "PharmacyInvoice"("organizationId", "invoiceNo");
 
 -- AddForeignKey
-ALTER TABLE "PharmacyOrder" ADD CONSTRAINT "PharmacyOrder_visitId_fkey" FOREIGN KEY ("visitId") REFERENCES "Visit"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyOrder" ADD CONSTRAINT "PharmacyOrder_visitId_fkey" FOREIGN KEY ("visitId") REFERENCES "Visit"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyOrder" ADD CONSTRAINT "PharmacyOrder_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyOrder" ADD CONSTRAINT "PharmacyOrder_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyOrder" ADD CONSTRAINT "PharmacyOrder_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyOrder" ADD CONSTRAINT "PharmacyOrder_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyOrderItem" ADD CONSTRAINT "PharmacyOrderItem_pharmacyOrderId_fkey" FOREIGN KEY ("pharmacyOrderId") REFERENCES "PharmacyOrder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyOrderItem" ADD CONSTRAINT "PharmacyOrderItem_pharmacyOrderId_fkey" FOREIGN KEY ("pharmacyOrderId") REFERENCES "PharmacyOrder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_pharmacyOrderId_fkey" FOREIGN KEY ("pharmacyOrderId") REFERENCES "PharmacyOrder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_pharmacyOrderId_fkey" FOREIGN KEY ("pharmacyOrderId") REFERENCES "PharmacyOrder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyInvoice" ADD CONSTRAINT "PharmacyInvoice_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "PharmacyInvoiceItem" ADD CONSTRAINT "PharmacyInvoiceItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "PharmacyInvoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "PharmacyInvoiceItem" ADD CONSTRAINT "PharmacyInvoiceItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "PharmacyInvoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- RenameIndex
-ALTER INDEX "PractitionerProfile_organizationId_clinicId_specialty_active_id" RENAME TO "PractitionerProfile_organizationId_clinicId_specialty_activ_idx";
+DO $$ BEGIN
+    IF to_regclass('"PractitionerProfile_organizationId_clinicId_specialty_active_id"') IS NOT NULL
+       AND to_regclass('"PractitionerProfile_organizationId_clinicId_specialty_activ_idx"') IS NULL THEN
+        ALTER INDEX "PractitionerProfile_organizationId_clinicId_specialty_active_id" RENAME TO "PractitionerProfile_organizationId_clinicId_specialty_activ_idx";
+    END IF;
+END $$;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultPortalPath, portalAreaForPath, roleCanAccessArea } from "../src/lib/portal-access";
+import { canDisplayPortalNavigation, defaultPortalPath, portalAreaForPath, roleCanAccessArea } from "../src/lib/portal-access";
 
 test("doctor navigation exposes clinical work but not hospital administration", () => {
   assert.equal(roleCanAccessArea("DOCTOR", "doctor"), true);
@@ -18,4 +18,10 @@ test("route guards and landing redirects use the same portal areas", () => {
   assert.equal(defaultPortalPath("LAB_RADIOLOGY"), "/diagnostics");
   assert.equal(defaultPortalPath("NURSE"), "/frontdesk");
   assert.equal(roleCanAccessArea("NURSE", "frontdesk"), true);
+});
+
+test("portal navigation stays hidden until the required password change is complete", () => {
+  assert.equal(canDisplayPortalNavigation(true), false);
+  assert.equal(canDisplayPortalNavigation(undefined), false);
+  assert.equal(canDisplayPortalNavigation(false), true);
 });

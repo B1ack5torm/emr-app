@@ -5,12 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, FlaskConical, FolderOpen, History, Settings, Building2, Check, ChevronDown, LoaderCircle } from "lucide-react";
-import { PortalArea, roleCanAccessArea } from "@/lib/portal-access";
+import { canDisplayPortalNavigation, PortalArea, roleCanAccessArea } from "@/lib/portal-access";
 
 export default function NavBar() {
   const { data: session, update } = useSession();
   const pathname = usePathname();
   const role = (session?.user as any)?.role;
+  const mustChangePassword = (session?.user as any)?.mustChangePassword as boolean | undefined;
   const orgName = (session?.user as any)?.organizationName;
   const organizationId = (session?.user as any)?.organizationId;
   const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
@@ -84,7 +85,7 @@ export default function NavBar() {
         </div>
         {session && (
           <div className="flex items-center gap-3 text-sm">
-            {role === "SUPER_ADMIN" && organizations.length > 0 && (
+            {canDisplayPortalNavigation(mustChangePassword) && role === "SUPER_ADMIN" && organizations.length > 0 && (
               <div ref={organizationSwitcherRef} className="relative">
                 <button
                   type="button"
@@ -140,7 +141,7 @@ export default function NavBar() {
           </div>
         )}
       </div>
-      {session && (
+      {session && canDisplayPortalNavigation(mustChangePassword) && (
         <div className="flex gap-2 mt-4 overflow-x-auto pb-1">
           {tabs.filter(t => roleCanAccessArea(role, t.area)).map(t => (
             <Link key={t.href} href={t.href} className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold ${pathname?.startsWith(t.href) ? "bg-accentSoft text-accentDark" : "text-inkSoft"}`}>
