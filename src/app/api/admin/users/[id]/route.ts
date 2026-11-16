@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { audit, requirePermission } from "@/lib/security";
+import bcrypt from "bcryptjs";
 
 const assignableRoles = ["CLINIC_ADMIN", "ADMIN", "DOCTOR", "NURSE", "FRONT_DESK", "RECEPTION", "BILLING", "LAB_RADIOLOGY"];
 
@@ -17,6 +18,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (target.role === "SUPER_ADMIN") return NextResponse.json({ error: "The Super Admin role cannot be changed here." }, { status: 403 });
 
   const body = await req.json();
+
+  if (body.action === "resetPassword") {
+    if (target.id === access.user.id) return NextResponse.json({ error: "Use Change password for your own account." }, { status: 400 });
+    if (target.status !== "ACTIVE") return NextResponse.json({ error: "Only active accounts can have their password reset." }, { status: 400 });
+    const password = body.password;
+    if (typeof password !== "string" || password.length < 8 || Buffer.byteLength(password, "utf8") > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      return NextResponse.json({ error: "Use 8–72 characters containing a letter and number." }, { status: 400 });
+    }
+    const changedAt = new Date();
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: target.id }, data: { passwordHash, mustChangePassword: true, passwordChangedAt: changedAt } });
+      await tx.passwordResetToken.updateMany({ where: { userId: target.id, usedAt: null }, data: { usedAt: changedAt } });
+      await tx.auditEvent.create({ data: { organizationId: target.organizationId, userId: access.user.id, action: "ADMIN_PASSWORD_RESET", resourceType: "User", resourceId: target.id, newValue: { mustChangePassword: true } } });
+    });
+    return NextResponse.json({ success: true, message: "Temporary password saved. The user must change it at their next sign-in." });
+  }
 
   if (body.action === "approve") {
     if (!assignableRoles.includes(body.role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });

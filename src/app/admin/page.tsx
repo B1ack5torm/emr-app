@@ -39,6 +39,24 @@ export default function AdminPage() {
   const [manualError, setManualError] = useState("");
   const [manualSuccess, setManualSuccess] = useState("");
   const [creating, setCreating] = useState(false);
+  const [resetUser, setResetUser] = useState<StaffUser | null>(null);
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+
+  const resetPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!resetUser) return;
+    setResetBusy(true); setResetError(""); setResetSuccess("");
+    try {
+      await sessionFetch(`/api/admin/users/${resetUser.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "resetPassword", password: temporaryPassword }) }).then(readJson);
+      setResetSuccess(`Temporary password saved for ${resetUser.email}. They must change it at their next sign-in.`);
+      setTemporaryPassword(""); setResetUser(null);
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : "Could not reset password.");
+    } finally { setResetBusy(false); }
+  };
 
   const [hospitalName, setHospitalName] = useState("");
   const [hospitalAdminName, setHospitalAdminName] = useState("");
@@ -270,6 +288,21 @@ export default function AdminPage() {
 
       <div>
         <div className="text-xs font-bold text-inkSoft uppercase mb-2">Active staff ({active.length})</div>
+        {resetSuccess && <p role="status" className="mb-3 text-sm text-accentDark">{resetSuccess}</p>}
+        {resetUser && (
+          <form onSubmit={resetPassword} className="mb-4 rounded-lg border border-border bg-card p-4">
+            <h3 className="font-semibold">Reset password for {resetUser.name}</h3>
+            <p className="mt-1 text-sm text-inkSoft">{resetUser.email} · Set a temporary password and share it directly. No email will be sent.</p>
+            <label className="mt-3 block text-sm font-semibold" htmlFor="staff-reset-password">Temporary password</label>
+            <input id="staff-reset-password" type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={temporaryPassword} onChange={(event) => setTemporaryPassword(event.target.value)} className="mt-1 w-full max-w-sm rounded-lg border border-border bg-[#FCFAF5] px-3 py-2" />
+            <p className="mt-1 text-xs text-inkSoft">Use 8–72 characters with a letter and number. A password change is required at next sign-in.</p>
+            {resetError && <p role="alert" className="mt-2 text-sm text-alert">{resetError}</p>}
+            <div className="mt-3 flex gap-2">
+              <button disabled={resetBusy} className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{resetBusy ? "Saving…" : "Save temporary password"}</button>
+              <button type="button" disabled={resetBusy} onClick={() => { setResetUser(null); setTemporaryPassword(""); setResetError(""); }} className="rounded-lg border border-border px-3 py-2 text-sm">Cancel</button>
+            </div>
+          </form>
+        )}
         <div className="flex flex-col gap-2">
           {active.map((u) => (
             <div key={u.id} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between flex-wrap gap-3">
@@ -285,6 +318,7 @@ export default function AdminPage() {
                   <option value="NURSE">Nurse</option><option value="BILLING">Billing</option><option value="LAB_RADIOLOGY">Lab / Radiology</option>
                   <option value="ADMIN">Admin</option>
                 </select>
+                {u.role !== "SUPER_ADMIN" && u.id !== (session?.user as any)?.id && <button onClick={() => { setResetUser(u); setTemporaryPassword(""); setResetError(""); setResetSuccess(""); }} className="text-accentDark text-xs font-semibold border border-border rounded-lg px-3 py-1.5">Reset password</button>}
                 {u.role !== "SUPER_ADMIN" && <button onClick={() => deleteUser(u.id, u.name)} className="text-alert text-xs font-semibold border border-alertSoft rounded-lg px-3 py-1.5">Remove</button>}
               </div>
             </div>
