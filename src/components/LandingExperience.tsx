@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { useState } from "react";
 import { Activity, CalendarDays, Check, ChevronRight, ClipboardList, FileText, HeartPulse, LockKeyhole, ShieldCheck, Sparkles, Stethoscope, UsersRound } from "lucide-react";
 

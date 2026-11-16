@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/SessionNavigation";
 import { useSession } from "next-auth/react";
 import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer, ScanLine } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
@@ -35,7 +37,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [pastVisits, setPastVisits] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`/api/visits/${params.visitId}`).then((r) => r.json()).then((v) => {
+    sessionFetch(`/api/visits/${params.visitId}`).then((r) => r.json()).then((v) => {
       setVisit(v);
       setNotes(v.doctorNotes || "");
       setDiagnosis(v.diagnosis || "");
@@ -43,7 +45,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       setRx(v.prescriptions?.length ? v.prescriptions : []);
       setTests((v.testsOrdered || []).map((t: any) => t.name));
       setImagingRecommendations(v.imagingRecommendations || []);
-      fetch(`/api/patients/${v.patientId}`).then((r) => r.json()).then((p) => {
+      sessionFetch(`/api/patients/${v.patientId}`).then((r) => r.json()).then((p) => {
         setPastVisits((p.visits || []).filter((pv: any) => pv.id !== v.id && pv.status === "COMPLETED"));
       });
     });
@@ -51,7 +53,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/lab-tests").then(async (response) => {
+    sessionFetch("/api/lab-tests").then(async (response) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not load laboratory tests.");
       return data;
@@ -63,7 +65,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/imaging-catalog").then(async (response) => {
+    sessionFetch("/api/imaging-catalog").then(async (response) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not load imaging procedures.");
       return data;
@@ -123,7 +125,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const finalImaging = imagingDraft.trim() ? [...imagingRecommendations, { code: "", name: imagingDraft.trim(), modality: "Other", description: `${imagingDraft.trim()} — clinician-entered imaging request.` }] : imagingRecommendations;
-    const res = await fetch(`/api/visits/${params.visitId}`, {
+    const res = await sessionFetch(`/api/visits/${params.visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ diagnosis, doctorNotes: notes, advice, prescriptions: rx, testsOrdered: finalTests, imagingRecommendations: finalImaging, complete }),
     });
@@ -313,14 +315,14 @@ function DiagnosticOrderPanel({ visitId, disabled }: { visitId: string; disabled
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const load = useCallback(async () => {
-    const response = await fetch(`/api/diagnostic-orders?visitId=${visitId}&pageSize=100`);
+    const response = await sessionFetch(`/api/diagnostic-orders?visitId=${visitId}&pageSize=100`);
     const data = await response.json();
     if (response.ok) { setOrders(data.orders); setEnabled(data.operationalDiagnosticOrdersEnabled === true); } else setError(data.error || "Could not load diagnostic orders.");
   }, [visitId]);
   useEffect(() => { void load(); }, [load]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true); setError("");
-    const response = await fetch("/api/diagnostic-orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, visitId, scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null }) });
+    const response = await sessionFetch("/api/diagnostic-orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, visitId, scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null }) });
     const data = await response.json(); setSaving(false);
     if (!response.ok) return setError(data.error || "Could not create the diagnostic order.");
     setForm((current) => ({ ...current, procedureCode: "", procedureName: "", clinicalIndication: "", scheduledAt: "" }));
@@ -386,8 +388,8 @@ function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch(`/api/visits/${visit.id}/imaging-orders`).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
-      fetch("/api/imaging-procedures").then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
+      sessionFetch(`/api/visits/${visit.id}/imaging-orders`).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
+      sessionFetch("/api/imaging-procedures").then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data; }),
     ]).then(([savedOrders, savedProcedures]) => {
       if (cancelled) return;
       setOrders(savedOrders.orders || []);
@@ -409,7 +411,7 @@ function ImagingOrderPanel({ visit, disabled }: { visit: any; disabled: boolean 
     event.preventDefault();
     setSending(true); setResult(null); setOrdersError("");
     try {
-      const response = await fetch(`/api/visits/${visit.id}/imaging-orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const response = await sessionFetch(`/api/visits/${visit.id}/imaging-orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const data = await response.json();
       setResult(data);
       if (data.order) setOrders((current) => [data.order, ...current.filter((order) => order.id !== data.order.id)]);

@@ -1,6 +1,8 @@
 "use client";
+
+import { sessionFetch, browserSessionPath } from "@/lib/session-scope";
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { Receipt, Plus, IndianRupee } from "lucide-react";
 
 export default function BillingPage() {
@@ -10,8 +12,8 @@ export default function BillingPage() {
 
   const load = async () => {
     const [invRes, visitRes] = await Promise.all([
-      fetch("/api/invoices").then((r) => r.json()),
-      fetch("/api/visits?status=COMPLETED").then((r) => r.json()),
+      sessionFetch("/api/invoices").then((r) => r.json()),
+      sessionFetch("/api/visits?status=COMPLETED").then((r) => r.json()),
     ]);
     setInvoices(invRes);
     setPendingVisits(visitRes.filter((v: any) => !v.invoice));
@@ -20,8 +22,8 @@ export default function BillingPage() {
   useEffect(() => { load(); }, []);
 
   const generate = async (visitId: string) => {
-    const res = await fetch(`/api/visits/${visitId}/invoice`, { method: "POST" });
-    if (res.ok) { const inv = await res.json(); window.location.href = `/billing/${inv.id}`; }
+    const res = await sessionFetch(`/api/visits/${visitId}/invoice`, { method: "POST" });
+    if (res.ok) { const inv = await res.json(); window.location.href = browserSessionPath(`/billing/${inv.id}`); }
   };
 
   const statusColor = (s: string) => s === "PAID" ? "bg-accentSoft text-accentDark" : s === "PARTIALLY_PAID" ? "bg-waitingSoft text-waiting" : s === "VOID" ? "bg-[#eee] text-inkSoft" : "bg-alertSoft text-alert";

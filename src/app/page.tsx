@@ -1,5 +1,5 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
+import { getServerSession } from "@/lib/server-session";
+import { redirect } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
 import LandingExperience from "@/components/LandingExperience";
 import { defaultPortalPath } from "@/lib/portal-access";

@@ -1,4 +1,6 @@
 "use client";
+
+import { sessionFetch } from "@/lib/session-scope";
 import { useCallback, useEffect, useState } from "react";
 import { Plus, X, Printer, CheckCircle2 } from "lucide-react";
 
@@ -26,7 +28,7 @@ export default function InvoiceDetailPage({ params }: { params: { invoiceId: str
   const [payError, setPayError] = useState("");
   const [refundAmount, setRefundAmount] = useState(""); const [refundReason, setRefundReason] = useState("");
 
-  const load = useCallback(() => fetch(`/api/invoices/${params.invoiceId}`).then((r) => r.json()).then((inv) => {
+  const load = useCallback(() => sessionFetch(`/api/invoices/${params.invoiceId}`).then((r) => r.json()).then((inv) => {
     setInvoice(inv);
     setItems(inv.items.map((it: any) => ({ category: it.category, description: it.description, quantity: it.quantity, unitPrice: it.unitPrice / 100, taxRatePercent: it.taxRatePercent, discount: (it.discountAmount || 0) / 100 })));
   }), [params.invoiceId]);
@@ -50,7 +52,7 @@ export default function InvoiceDetailPage({ params }: { params: { invoiceId: str
     setError("");
     if (items.some((it) => !it.description.trim())) { setError("Every line item needs a description."); return; }
     setSaving(true);
-    const res = await fetch(`/api/invoices/${params.invoiceId}`, {
+    const res = await sessionFetch(`/api/invoices/${params.invoiceId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: items.map((it) => ({ ...it, unitPrice: Math.round(it.unitPrice * 100), discount: Math.round(it.discount * 100) })) }),
     });
@@ -61,7 +63,7 @@ export default function InvoiceDetailPage({ params }: { params: { invoiceId: str
   const recordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setPayError("");
-    const res = await fetch(`/api/invoices/${params.invoiceId}/payments`, {
+    const res = await sessionFetch(`/api/invoices/${params.invoiceId}/payments`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: Math.round(Number(payAmount) * 100), method: payMethod, reference: payRef }),
     });
@@ -75,11 +77,11 @@ export default function InvoiceDetailPage({ params }: { params: { invoiceId: str
     if (!confirm("Void this invoice? This cannot be undone.")) return;
     const reason = window.prompt("Enter the reason for voiding this invoice:")?.trim();
     if (!reason) return;
-    const response = await fetch(`/api/invoices/${params.invoiceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voided: true, reason }) });
+    const response = await sessionFetch(`/api/invoices/${params.invoiceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ voided: true, reason }) });
     if (!response.ok) return setError((await response.json()).error || "Could not void invoice.");
     load();
   };
-  const recordRefund = async (event: React.FormEvent) => { event.preventDefault(); const response = await fetch(`/api/invoices/${params.invoiceId}/refunds`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: Math.round(Number(refundAmount) * 100), reason: refundReason }) }); const data = await response.json(); if (!response.ok) return setPayError(data.error); setRefundAmount(""); setRefundReason(""); load(); };
+  const recordRefund = async (event: React.FormEvent) => { event.preventDefault(); const response = await sessionFetch(`/api/invoices/${params.invoiceId}/refunds`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: Math.round(Number(refundAmount) * 100), reason: refundReason }) }); const data = await response.json(); if (!response.ok) return setPayError(data.error); setRefundAmount(""); setRefundReason(""); load(); };
 
   const refunded = (invoice.refunds || []).reduce((sum: number, item: any) => sum + item.amount, 0);
   const netPaid = invoice.amountPaid - refunded;

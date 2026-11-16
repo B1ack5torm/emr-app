@@ -1,5 +1,7 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useState, useEffect } from "react";
 import { Search, Plus, X, AlertTriangle, ArrowLeft, CheckCircle2, UserRoundPlus } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
@@ -26,7 +28,7 @@ export default function FrontDeskPage() {
   useEffect(() => {
     const t = setTimeout(async () => {
       if (!query.trim()) { setResults([]); return; }
-      const res = await fetch(`/api/patients?q=${encodeURIComponent(query)}`);
+      const res = await sessionFetch(`/api/patients?q=${encodeURIComponent(query)}`);
       setResults(await res.json());
     }, 300);
     return () => clearTimeout(t);
@@ -135,7 +137,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
   };
 
   useEffect(() => {
-    fetch("/api/doctors").then(async (res) => {
+    sessionFetch("/api/doctors").then(async (res) => {
       if (res.ok) setDoctors(await res.json());
       else setError("Could not load the doctor list.");
     }).catch(() => setError("Could not load the doctor list."));
@@ -146,7 +148,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
     if (dobError) { setError(dobError); return; }
     setError(""); setSubmitting(true);
     const finalAllergies = draft.trim() ? [...allergies, draft.trim()] : allergies;
-    const res = await fetch("/api/patients", {
+    const res = await sessionFetch("/api/patients", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, age: Number(form.age), allergies: finalAllergies, overrideDuplicate }),
     });
@@ -158,7 +160,7 @@ function NewPatientForm({ onCreated, onBack }: { onCreated: (p: Patient, doctorI
 
   const selectExisting = async (id: string) => {
     setSubmitting(true); setError("");
-    const response = await fetch(`/api/patients/${id}`); const data = await response.json(); setSubmitting(false);
+    const response = await sessionFetch(`/api/patients/${id}`); const data = await response.json(); setSubmitting(false);
     if (!response.ok) return setError(data.error || "Could not open the existing record.");
     onCreated(data, form.doctorId);
   };
@@ -229,11 +231,11 @@ function StartVisit({ patient, doctorId: initialDoctorId, onDone, onBack }: { pa
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
   useEffect(() => {
-    fetch("/api/doctors").then((res) => res.ok ? res.json() : []).then(setDoctors);
+    sessionFetch("/api/doctors").then((res) => res.ok ? res.json() : []).then(setDoctors);
   }, []);
 
   const submit = async () => {
-    const res = await fetch("/api/visits", {
+    const res = await sessionFetch("/api/visits", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ patientId: patient.id, doctorId, chiefComplaint: complaint, bp, temperature, pulse, weight }),
     });

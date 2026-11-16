@@ -1,5 +1,7 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Department = { id: string; name: string };
@@ -17,7 +19,7 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 const CATEGORIES = ["CONSULTATION", "MEDICINE", "TEST", "IMAGING", "OTHER"];
 
 async function requestJson(url: string, init?: RequestInit) {
-  const response = await fetch(url, init);
+  const response = await sessionFetch(url, init);
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
   return data;

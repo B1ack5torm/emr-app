@@ -1,5 +1,7 @@
 "use client";
 
+import { browserSessionPath, sessionFetch } from "@/lib/session-scope";
+
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Search, User, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, Clock, Pencil, Save, X, Plus, ShieldAlert, Syringe, Pill, Stethoscope } from "lucide-react";
@@ -19,7 +21,7 @@ export default function RecordsPage() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      fetch(`/api/patients?q=${encodeURIComponent(query)}`).then((r) => r.json()).then(setPatients);
+      sessionFetch(`/api/patients?q=${encodeURIComponent(query)}`).then((r) => r.json()).then(setPatients);
     }, 250);
     return () => clearTimeout(t);
   }, [query]);
@@ -27,7 +29,7 @@ export default function RecordsPage() {
   const toggle = async (id: string) => {
     if (expanded === id) { setExpanded(null); setEditing(null); return; }
     setExpanded(id);
-    const res = await fetch(`/api/patients/${id}/clinical-summary`);
+    const res = await sessionFetch(`/api/patients/${id}/clinical-summary`);
     setDetail(await res.json());
   };
 
@@ -60,7 +62,7 @@ export default function RecordsPage() {
               </div>
               {isOpen && detail?.id === p.id && (
                 <div className="px-4 pb-4">
-                  <div className="mb-3 flex justify-end gap-2"><a href={`/api/fhir/patients/${p.id}`} className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">Export FHIR</a>{canEdit && <button onClick={() => setEditing(editing === p.id ? null : p.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">{editing === p.id ? <><X size={13} /> Cancel editing</> : <><Pencil size={13} /> Edit patient</>}</button>}</div>
+                  <div className="mb-3 flex justify-end gap-2"><a href={browserSessionPath(`/api/fhir/patients/${p.id}`)} className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">Export FHIR</a>{canEdit && <button onClick={() => setEditing(editing === p.id ? null : p.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-accentDark">{editing === p.id ? <><X size={13} /> Cancel editing</> : <><Pencil size={13} /> Edit patient</>}</button>}</div>
                   {editing === p.id ? <PatientEditForm patient={detail} onCancel={() => setEditing(null)} onSaved={(updated) => { setDetail((current: any) => ({ ...current, ...updated })); setPatients((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item)); setEditing(null); }} /> : <>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div><b>Phone:</b> {detail.phone || "—"}</div>
@@ -70,8 +72,8 @@ export default function RecordsPage() {
                     <div><b>Emergency contact:</b> {detail.emergencyContact || "—"}</div>
                   </div>
                   <AllergyBanner allergies={detail.allergies.map((a: any) => a.name)} />
-                  <ClinicalSummary patient={detail} canEdit={canEditClinical} onChanged={async () => { const response = await fetch(`/api/patients/${p.id}/clinical-summary`); if (response.ok) setDetail(await response.json()); }} />
-                  {canMerge && <DuplicateMergePanel target={detail} onMerged={async () => { const response = await fetch(`/api/patients/${p.id}/clinical-summary`); if (response.ok) setDetail(await response.json()); }} />}
+                  <ClinicalSummary patient={detail} canEdit={canEditClinical} onChanged={async () => { const response = await sessionFetch(`/api/patients/${p.id}/clinical-summary`); if (response.ok) setDetail(await response.json()); }} />
+                  {canMerge && <DuplicateMergePanel target={detail} onMerged={async () => { const response = await sessionFetch(`/api/patients/${p.id}/clinical-summary`); if (response.ok) setDetail(await response.json()); }} />}
                   <div className="text-xs font-bold text-inkSoft uppercase mt-3.5">Visit history</div>
                   <div className="flex flex-col gap-2 mt-2">
                     {detail.visits.length === 0 && <div className="text-sm text-inkSoft">No visits recorded yet.</div>}
@@ -103,13 +105,13 @@ function ClinicalSummary({ patient, canEdit, onChanged }: { patient: any; canEdi
     const config = summaryConfig[kind]; setBusy(true); setError("");
     const body: any = { kind, [config.field]: value, notes: details, description: kind === "FLAG" ? details : undefined, severity };
     if (config.date) body[config.date] = date;
-    const response = await fetch(`/api/patients/${patient.id}/clinical-summary`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await response.json(); setBusy(false);
+    const response = await sessionFetch(`/api/patients/${patient.id}/clinical-summary`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await response.json(); setBusy(false);
     if (!response.ok) return setError(data.error || "Could not save the clinical item.");
     setAdding(null); setValue(""); setDate(""); setDetails(""); setSeverity("UNKNOWN"); await onChanged();
   };
   const changeStatus = async (kind: string, item: any) => {
     const body = kind === "FLAG" ? { active: false } : kind === "MEDICATION" ? { status: "STOPPED" } : { clinicalStatus: "RESOLVED" };
-    const response = await fetch(`/api/patients/${patient.id}/clinical-summary/${kind.toLowerCase()}/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const response = await sessionFetch(`/api/patients/${patient.id}/clinical-summary/${kind.toLowerCase()}/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (response.ok) await onChanged();
   };
   const label = (kind: string, item: any) => item[summaryConfig[kind].field];
@@ -132,8 +134,8 @@ function ClinicalSummary({ patient, canEdit, onChanged }: { patient: any; canEdi
 
 function DuplicateMergePanel({ target, onMerged }: { target: any; onMerged: () => Promise<void> }) {
   const [open, setOpen] = useState(false); const [query, setQuery] = useState(""); const [matches, setMatches] = useState<any[]>([]); const [source, setSource] = useState<any>(null); const [reason, setReason] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
-  useEffect(() => { if (!open || query.trim().length < 2) { setMatches([]); return; } const timer = setTimeout(() => fetch(`/api/patients?q=${encodeURIComponent(query)}`).then((r) => r.json()).then((rows) => setMatches(Array.isArray(rows) ? rows.filter((row) => row.id !== target.id) : [])), 250); return () => clearTimeout(timer); }, [open, query, target.id]);
-  const merge = async () => { if (!source) return; if (!window.confirm(`Merge ${source.name} (${source.mrn}) into ${target.name} (${target.mrn})? This cannot be automatically undone.`)) return; setBusy(true); setError(""); const response = await fetch("/api/patients/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourcePatientId: source.id, targetPatientId: target.id, confirmTargetMrn: target.mrn, reason }) }); const data = await response.json(); setBusy(false); if (!response.ok) return setError(data.error || "Could not merge records."); setOpen(false); setSource(null); setQuery(""); setReason(""); await onMerged(); };
+  useEffect(() => { if (!open || query.trim().length < 2) { setMatches([]); return; } const timer = setTimeout(() => sessionFetch(`/api/patients?q=${encodeURIComponent(query)}`).then((r) => r.json()).then((rows) => setMatches(Array.isArray(rows) ? rows.filter((row) => row.id !== target.id) : [])), 250); return () => clearTimeout(timer); }, [open, query, target.id]);
+  const merge = async () => { if (!source) return; if (!window.confirm(`Merge ${source.name} (${source.mrn}) into ${target.name} (${target.mrn})? This cannot be automatically undone.`)) return; setBusy(true); setError(""); const response = await sessionFetch("/api/patients/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourcePatientId: source.id, targetPatientId: target.id, confirmTargetMrn: target.mrn, reason }) }); const data = await response.json(); setBusy(false); if (!response.ok) return setError(data.error || "Could not merge records."); setOpen(false); setSource(null); setQuery(""); setReason(""); await onMerged(); };
   return <div className="mt-4 rounded-xl border border-border bg-card p-3"><button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left text-xs font-bold uppercase text-inkSoft"><span>Identity and duplicate management</span><span>{open ? "Close" : "Review"}</span></button>{open && <div className="mt-3 space-y-2"><div className="text-xs text-inkSoft">The current record <b>{target.name} ({target.mrn})</b> will be kept as the master record.</div><input value={query} onChange={(e) => { setQuery(e.target.value); setSource(null); }} placeholder="Search duplicate by MRN, name, phone or identifier" className="w-full rounded-lg border border-border bg-[#FCFAF5] px-3 py-2 text-sm" />{!source && matches.slice(0, 5).map((item) => <button key={item.id} onClick={() => { setSource(item); setQuery(`${item.name} (${item.mrn})`); setMatches([]); }} className="block w-full rounded-lg border border-border bg-white p-2 text-left text-xs"><b>{item.name}</b> · {item.mrn} · {item.phone || "no phone"}</button>)}{source && <><div className="rounded-lg border border-alert bg-alertSoft p-2 text-xs text-alert">Source record to retire: <b>{source.name} ({source.mrn})</b></div><textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Clinical/administrative reason for merge (minimum 10 characters)" className="min-h-16 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" /><button disabled={busy || reason.trim().length < 10} onClick={merge} className="rounded-lg bg-alert px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busy ? "Merging…" : "Merge duplicate into this record"}</button></>}{error && <div className="text-xs text-alert">{error}</div>}</div>}</div>;
 }
 
@@ -158,7 +160,7 @@ function PatientEditForm({ patient, onCancel, onSaved }: { patient: any; onCance
   };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setError(""); setSaving(true);
-    const response = await fetch(`/api/patients/${patient.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, age: Number(form.age), version: patient.version }) });
+    const response = await sessionFetch(`/api/patients/${patient.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, age: Number(form.age), version: patient.version }) });
     const data = await response.json(); setSaving(false);
     if (!response.ok) return setError(data.error || "Could not update the patient.");
     onSaved(data);

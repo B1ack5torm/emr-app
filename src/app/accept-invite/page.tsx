@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "@/components/SessionNavigation";
 import { Stethoscope } from "lucide-react";
 
 export default function AcceptInvitePage() {
@@ -29,7 +31,7 @@ function AcceptInviteForm() {
 
   useEffect(() => {
     if (!token) { setLoadError("Missing invitation token."); setLoading(false); return; }
-    fetch(`/api/invites/${token}`).then(async (r) => {
+    sessionFetch(`/api/invites/${token}`).then(async (r) => {
       const data = await r.json();
       if (!r.ok) setLoadError(data.error || "Invalid invitation.");
       else setInvite(data);
@@ -45,7 +47,7 @@ function AcceptInviteForm() {
     if (password !== confirmPassword) { setSubmitError("Passwords do not match."); return; }
 
     setSubmitting(true);
-    const res = await fetch(`/api/invites/${token}/accept`, {
+    const res = await sessionFetch(`/api/invites/${token}/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, password }),

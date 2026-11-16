@@ -1,18 +1,20 @@
 "use client";
 
+import { sessionFetch, browserSessionPath } from "@/lib/session-scope";
+
 import { useEffect, useState } from "react";
 import { Activity, AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, FileText, HeartPulse, LogOut, Pill, Receipt, ScanLine, Stethoscope, TestTube2, UserRound } from "lucide-react";
 
 export default function PatientJacketPage() {
   const [patient, setPatient] = useState<any>(null);
   const [error, setError] = useState("");
-  useEffect(() => { fetch("/api/patient-portal").then(async (response) => { if (response.status === 401) { window.location.assign("/patient-login"); return; } const data = await response.json(); if (!response.ok) throw new Error(data.error); setPatient(data); }).catch((reason) => setError(reason.message || "Could not load your record.")); }, []);
+  useEffect(() => { sessionFetch("/api/patient-portal").then(async (response) => { if (response.status === 401) { window.location.assign(browserSessionPath("/patient-login")); return; } const data = await response.json(); if (!response.ok) throw new Error(data.error); setPatient(data); }).catch((reason) => setError(reason.message || "Could not load your record.")); }, []);
   if (error) return <div className="rounded-xl bg-alertSoft p-4 text-alert">{error}</div>;
   if (!patient) return <div className="text-inkSoft">Loading your patient jacket…</div>;
 
   const nextAppointment = [...patient.appointments].filter((appointment: any) => appointment.status === "SCHEDULED" && new Date(appointment.scheduledAt) >= new Date()).sort((a: any, b: any) => +new Date(a.scheduledAt) - +new Date(b.scheduledAt))[0];
   return <div className="mx-auto max-w-5xl pb-10">
-    <header className="mb-5 flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white"><HeartPulse size={20} /></span><div><p className="font-serif text-lg font-bold">EMR Patient Portal</p><p className="text-xs text-inkSoft">Private health record access</p></div></div><button onClick={async () => { await fetch("/api/patient-portal/logout", { method: "POST" }); window.location.assign("/patient-login"); }} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-bold text-alert"><LogOut size={15} /> Sign out</button></header>
+    <header className="mb-5 flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white"><HeartPulse size={20} /></span><div><p className="font-serif text-lg font-bold">EMR Patient Portal</p><p className="text-xs text-inkSoft">Private health record access</p></div></div><button onClick={async () => { await sessionFetch("/api/patient-portal/logout", { method: "POST" }); window.location.assign(browserSessionPath("/patient-login")); }} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-bold text-alert"><LogOut size={15} /> Sign out</button></header>
     <section className="overflow-hidden rounded-2xl bg-[#214F43] text-white shadow-xl shadow-[#214F43]/10"><div className="grid gap-6 p-6 sm:grid-cols-[1fr_auto] sm:p-8"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-[#BFD9CE]">Patient jacket</p><h1 className="mt-2 font-serif text-3xl font-bold">{patient.name}</h1><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[#DDEBE5]"><span>{patient.mrn}</span><span>{patient.age} years · {patient.gender}</span><span>{patient.organization.name}</span></div></div><div className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3"><HeartPulse size={28} className="text-[#F0B968]" /><div><p className="text-xs text-[#BFD9CE]">Blood group</p><p className="text-xl font-bold">{patient.bloodGroup || "Not recorded"}</p></div></div></div></section>
 
     {patient.allergies.length > 0 && <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#E8B9A9] bg-alertSoft p-4 text-alert"><AlertTriangle size={19} className="mt-0.5 shrink-0" /><div><p className="font-bold">Allergy alert</p><p className="mt-1 text-sm">{patient.allergies.map((allergy: any) => allergy.name).join(", ")}</p></div></div>}

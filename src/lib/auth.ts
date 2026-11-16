@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createHash } from "crypto";
+import { scopePath, sessionCookieName, sessionPrefix } from "@/lib/session-scope";
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -169,3 +170,30 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+export function scopedAuthOptions(scope: string, base: NextAuthOptions = authOptions): NextAuthOptions {
+  const prefix = sessionPrefix(scope);
+  if (!prefix) return base;
+  const secure = process.env.NEXTAUTH_URL?.startsWith("https://") || process.env.NODE_ENV === "production";
+  const options = { httpOnly: true, sameSite: "lax" as const, path: prefix, secure };
+  return {
+    ...base,
+    pages: { ...base.pages, signIn: `${prefix}/login`, error: `${prefix}/login` },
+    cookies: {
+      sessionToken: { name: sessionCookieName(scope, secure), options },
+      csrfToken: { name: `${secure ? "__Secure-" : ""}next-auth.csrf-token.${scope}`, options },
+      callbackUrl: { name: `${secure ? "__Secure-" : ""}next-auth.callback-url.${scope}`, options },
+    },
+    callbacks: {
+      ...base.callbacks,
+      async redirect({ url, baseUrl }) {
+        const target = new URL(url, baseUrl);
+        if (target.origin !== new URL(baseUrl).origin) return `${baseUrl}${prefix}/`;
+        // Never let an auth redirect select another account's namespace.
+        const path = target.pathname.startsWith("/session/") && !target.pathname.startsWith(`${prefix}/`)
+          ? "/" : `${target.pathname}${target.search}${target.hash}`;
+        return `${baseUrl}${scopePath(path, scope)}`;
+      },
+    },
+  };
+}

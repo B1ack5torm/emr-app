@@ -1,8 +1,10 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { Suspense, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "@/components/SessionNavigation";
+import { useRouter, useSearchParams } from "@/components/SessionNavigation";
 import { KeyRound, Stethoscope } from "lucide-react";
 
 export default function ResetPasswordPage() {
@@ -25,7 +27,7 @@ function ResetPasswordForm() {
     if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) { setError("Password must be at least 8 characters and contain a letter and number."); return; }
     setLoading(true);
     try {
-      const response = await fetch("/api/password-reset/confirm", {
+      const response = await sessionFetch("/api/password-reset/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),

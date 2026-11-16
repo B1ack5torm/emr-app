@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { Mail, Stethoscope } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -15,7 +17,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
     try {
-      const response = await fetch("/api/password-reset/request", {
+      const response = await sessionFetch("/api/password-reset/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

@@ -1,5 +1,7 @@
 "use client";
 
+import { browserSessionPath, sessionFetch } from "@/lib/session-scope";
+
 import { useSession } from "next-auth/react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { canReviewDiagnosticOrder } from "@/lib/domain/diagnostics";
@@ -61,7 +63,7 @@ export default function DiagnosticsPage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const data = await fetch(`/api/diagnostic-orders?type=${type}&status=${status}`).then(responseJson);
+      const data = await sessionFetch(`/api/diagnostic-orders?type=${type}&status=${status}`).then(responseJson);
       setOrders(data.orders);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not load diagnostic orders.");
@@ -89,7 +91,7 @@ export default function DiagnosticsPage() {
     setError("");
     setNotice("");
     try {
-      await fetch(`/api/diagnostic-orders/${order.id}`, {
+      await sessionFetch(`/api/diagnostic-orders/${order.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -113,7 +115,7 @@ export default function DiagnosticsPage() {
     data.set("finalizeDiagnosticOrder", "true");
     data.set("file", file);
     try {
-      await fetch("/api/documents", { method: "POST", body: data }).then(responseJson);
+      await sessionFetch("/api/documents", { method: "POST", body: data }).then(responseJson);
       setNotice(`Report uploaded for ${order.patient.name}. It is ready for Dr. ${order.orderingPractitioner.name} to review.`);
       await load();
     } catch (reason) {
@@ -201,7 +203,7 @@ function ReportList({ documents }: { documents: Document[] }) {
   return <div className="mt-3 rounded-lg border border-border bg-[#FAF8F2] p-3">
     <p className="text-xs font-bold uppercase tracking-wide text-inkSoft">Diagnostic reports</p>
     <div className="mt-2 flex flex-wrap gap-2">
-      {documents.map((document) => <a key={document.id} href={`/api/documents/${document.id}?inline=1`} target="_blank" rel="noreferrer" className="rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-accentDark">
+      {documents.map((document) => <a key={document.id} href={browserSessionPath(`/api/documents/${document.id}?inline=1`)} target="_blank" rel="noreferrer" className="rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-accentDark">
         Open {document.originalName} · {(document.sizeBytes / 1024).toFixed(1)} KB
       </a>)}
     </div>

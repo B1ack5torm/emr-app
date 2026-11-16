@@ -1,6 +1,8 @@
 import "./globals.css";
 import Providers from "@/components/Providers";
 import NavBar from "@/components/NavBar";
+import { headers } from "next/headers";
+import { SESSION_SCOPE_HEADER } from "@/lib/session-scope";
 
 export const metadata = {
   title: "CareChart — Electronic Medical Record",
@@ -14,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Providers>
+        <Providers scope={headers().get(SESSION_SCOPE_HEADER) || ""}>
           <NavBar />
           <main className="mx-auto w-full max-w-[90rem] p-6">{children}</main>
         </Providers>

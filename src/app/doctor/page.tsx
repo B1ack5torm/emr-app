@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/SessionNavigation";
 import { AlertTriangle, CalendarCheck2, Check, Clock, Mail, Phone, X } from "lucide-react";
 
 type Visit = {
@@ -33,8 +35,8 @@ export default function DoctorQueuePage() {
   const load = useCallback(async () => {
     try {
       const [visitsResponse, requestsResponse] = await Promise.all([
-        fetch("/api/visits?status=WAITING"),
-        fetch("/api/doctor/appointment-requests"),
+        sessionFetch("/api/visits?status=WAITING"),
+        sessionFetch("/api/doctor/appointment-requests"),
       ]);
       const [visitData, requestData] = await Promise.all([visitsResponse.json(), requestsResponse.json()]);
       if (!visitsResponse.ok || !requestsResponse.ok) throw new Error(requestData.error || visitData.error || "Could not load the doctor's queue.");
@@ -52,7 +54,7 @@ export default function DoctorQueuePage() {
   const respond = async (id: string, action: "confirm" | "reject") => {
     setResponding(id); setError("");
     try {
-      const response = await fetch(`/api/doctor/appointment-requests/${id}`, {
+      const response = await sessionFetch(`/api/doctor/appointment-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),

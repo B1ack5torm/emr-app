@@ -1,5 +1,7 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { KeyRound } from "lucide-react";
@@ -19,7 +21,7 @@ export default function ChangePasswordPage() {
     if (newPassword === currentPassword) { setError("New password must be different from your current password."); return; }
 
     setSubmitting(true);
-    const res = await fetch("/api/account/change-password", {
+    const res = await sessionFetch("/api/account/change-password", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),
     });

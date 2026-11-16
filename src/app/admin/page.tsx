@@ -1,5 +1,7 @@
 "use client";
 
+import { sessionFetch, browserSessionPath } from "@/lib/session-scope";
+
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { CheckCircle2, XCircle, ShieldCheck, Clock, Mail, Send, UserPlus } from "lucide-react";
@@ -50,8 +52,8 @@ export default function AdminPage() {
     setLoadError("");
     try {
       const [u, i] = await Promise.all([
-        fetch("/api/admin/users").then(readJson),
-        fetch("/api/admin/invites").then(readJson),
+        sessionFetch("/api/admin/users").then(readJson),
+        sessionFetch("/api/admin/invites").then(readJson),
       ]);
       setUsers(u);
       setInvites(i);
@@ -71,7 +73,7 @@ export default function AdminPage() {
     e.preventDefault();
     setInviteError(""); setInviteSuccess("");
     setSending(true);
-    const res = await fetch("/api/admin/invites", {
+    const res = await sessionFetch("/api/admin/invites", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
     });
@@ -87,7 +89,7 @@ export default function AdminPage() {
     e.preventDefault();
     setManualError(""); setManualSuccess("");
     setCreating(true);
-    const res = await fetch("/api/admin/users", {
+    const res = await sessionFetch("/api/admin/users", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: manualName, email: manualEmail, password: manualPassword, role: manualRole }),
     });
@@ -102,7 +104,7 @@ export default function AdminPage() {
   const createHospital = async (e: React.FormEvent) => {
     e.preventDefault();
     setHospitalError(""); setHospitalSuccess(""); setCreatingHospital(true);
-    const res = await fetch("/api/organizations", {
+    const res = await sessionFetch("/api/organizations", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ hospitalName, adminName: hospitalAdminName, adminEmail: hospitalAdminEmail, adminPassword: hospitalAdminPassword }),
     });
@@ -112,30 +114,30 @@ export default function AdminPage() {
     setHospitalSuccess(`${data.name} was created. Switching to its hospital workspace…`);
     setHospitalName(""); setHospitalAdminName(""); setHospitalAdminEmail(""); setHospitalAdminPassword("");
     await update({ activeOrganizationId: data.id });
-    window.location.assign("/admin");
+    window.location.assign(browserSessionPath("/admin"));
   };
 
   const revokeInvite = async (id: string) => {
-    await fetch(`/api/admin/invites/${id}`, { method: "DELETE" });
+    await sessionFetch(`/api/admin/invites/${id}`, { method: "DELETE" });
     load();
   };
 
   const approve = async (id: string) => {
     const role = pendingRoleChoice[id] || "RECEPTION";
-    await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve", role }) });
+    await sessionFetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve", role }) });
     load();
   };
   const reject = async (id: string) => {
-    await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject" }) });
+    await sessionFetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject" }) });
     load();
   };
   const changeRole = async (id: string, role: string) => {
-    await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "changeRole", role }) });
+    await sessionFetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "changeRole", role }) });
     load();
   };
   const deleteUser = async (id: string, name: string) => {
     if (!confirm(`Remove ${name} from this hospital? They'll lose access immediately.`)) return;
-    await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+    await sessionFetch(`/api/admin/users/${id}`, { method: "DELETE" });
     load();
   };
 

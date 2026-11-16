@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { CheckCircle2, ShieldCheck, Stethoscope } from "lucide-react";
 
 export default function ActivatePatientPortalPage() {
@@ -16,7 +18,7 @@ export default function ActivatePatientPortalPage() {
     setError("");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
     setLoading(true);
-    const response = await fetch("/api/patient-portal/activate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const response = await sessionFetch("/api/patient-portal/activate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     const data = await response.json();
     setLoading(false);
     if (!response.ok) return setError(data.error || "Could not activate your portal.");

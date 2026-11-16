@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { Stethoscope } from "lucide-react";
 
 type Org = { id: string; name: string };
@@ -17,7 +19,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
-  useEffect(() => { fetch("/api/organizations").then((r) => r.json()).then(setOrgs); }, []);
+  useEffect(() => { sessionFetch("/api/organizations").then((r) => r.json()).then(setOrgs); }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export default function RegisterPage() {
     if (!organizationId) { setError("Please select an organization to join."); return; }
 
     setLoading(true);
-    const res = await fetch("/api/register", {
+    const res = await sessionFetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode: "join", name, email, password, organizationId }),

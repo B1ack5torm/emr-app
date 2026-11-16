@@ -1,9 +1,11 @@
 "use client";
 
+import { browserSessionPath } from "@/lib/session-scope";
+
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "@/components/SessionNavigation";
+import Link from "@/components/SessionNavigation";
 import { Stethoscope } from "lucide-react";
 
 export default function LoginPage() {
@@ -32,7 +34,7 @@ function LoginForm() {
     if (res?.error) {
       setError(res.error === "CredentialsSignin" ? "Invalid email or password." : res.error);
     } else {
-      window.location.assign("/");
+      window.location.assign(browserSessionPath("/"));
     }
   };
 
@@ -45,6 +47,8 @@ function LoginForm() {
           </div>
           <div className="font-serif font-bold text-lg">CareChart</div>
         </div>
+
+        <p className="mb-5 text-sm text-inkSoft">Sign in to this account separately. Accounts open in other tabs will stay signed in.</p>
 
         {justRegistered && (
           <div className="bg-accentSoft text-accentDark text-sm rounded-lg px-3 py-2 mb-4">

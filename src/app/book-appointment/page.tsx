@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { ArrowLeft, CalendarCheck2, CheckCircle2, Clock3, Stethoscope, UserRound } from "lucide-react";
 
 type AppointmentType = { id: string; name: string; durationMinutes: number };
@@ -44,7 +46,7 @@ export default function PublicAppointmentPage() {
 
   useEffect(() => {
     if (!hospitalSlug) return;
-    fetch(`/api/public/appointments?hospital=${encodeURIComponent(hospitalSlug)}`).then(async (response) => {
+    sessionFetch(`/api/public/appointments?hospital=${encodeURIComponent(hospitalSlug)}`).then(async (response) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setDoctors(data);
@@ -55,7 +57,7 @@ export default function PublicAppointmentPage() {
     setTime(""); setSlots([]);
     if (!doctorId || !date) return;
     setLoadingSlots(true); setError("");
-    fetch(`/api/public/appointments/availability?hospital=${encodeURIComponent(hospitalSlug)}&doctorId=${encodeURIComponent(doctorId)}&date=${date}&appointmentTypeId=${encodeURIComponent(appointmentTypeId)}`)
+    sessionFetch(`/api/public/appointments/availability?hospital=${encodeURIComponent(hospitalSlug)}&doctorId=${encodeURIComponent(doctorId)}&date=${date}&appointmentTypeId=${encodeURIComponent(appointmentTypeId)}`)
       .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setSlots(data.slots); })
       .catch((reason) => setError(reason.message || "Could not load available times."))
       .finally(() => setLoadingSlots(false));
@@ -68,7 +70,7 @@ export default function PublicAppointmentPage() {
     if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
     setError(""); setSubmitting(true);
     try {
-      const response = await fetch("/api/public/appointments", {
+      const response = await sessionFetch("/api/public/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current },
         body: JSON.stringify({ ...visitor, hospitalSlug, doctorId, appointmentTypeId: appointmentTypeId || undefined, date, time, privacyAccepted }),

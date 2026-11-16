@@ -1,7 +1,9 @@
 "use client";
 
+import { sessionFetch, browserSessionPath } from "@/lib/session-scope";
+
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/SessionNavigation";
 import { HeartPulse, ShieldCheck } from "lucide-react";
 
 export default function PatientLoginPage() {
@@ -12,10 +14,10 @@ export default function PatientLoginPage() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setError(""); setLoading(true);
-    const response = await fetch("/api/patient-portal/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+    const response = await sessionFetch("/api/patient-portal/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
     const data = await response.json(); setLoading(false);
     if (!response.ok) return setError(data.error || "Could not sign in.");
-    window.location.assign("/patient");
+    window.location.assign(browserSessionPath("/patient"));
   };
 
   return <div className="min-h-[78vh] flex items-center justify-center py-8"><form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-xl shadow-[#2C4E43]/5">

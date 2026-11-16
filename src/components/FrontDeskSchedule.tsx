@@ -1,5 +1,7 @@
 "use client";
 
+import { sessionFetch } from "@/lib/session-scope";
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react";
 import { F } from "@/components/shared";
@@ -33,7 +35,7 @@ export default function FrontDeskSchedule() {
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
-    const response = await fetch(`/api/appointments?date=${date}`);
+    const response = await sessionFetch(`/api/appointments?date=${date}`);
     if (!response.ok) return setError("Could not load the appointment schedule.");
     const data = await response.json();
     setAppointments(data.appointments);
@@ -53,7 +55,7 @@ export default function FrontDeskSchedule() {
     const reason = action === "cancel" ? window.prompt("Confirm the doctor is unavailable and add a cancellation note:", "Doctor unavailable")?.trim() : undefined;
     if (action === "cancel" && !reason) return;
     if (action === "no-show" && !window.confirm("Mark this patient as a no-show?")) return;
-    const response = await fetch(`/api/appointments/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
+    const response = await sessionFetch(`/api/appointments/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
     const data = await response.json();
     if (!response.ok) return setError(data.error || "Could not update appointment.");
     if (action === "check-in") setNotice("Patient checked in and added to the doctor’s queue.");
@@ -67,7 +69,7 @@ export default function FrontDeskSchedule() {
     const reason = action === "cancel" ? window.prompt("Confirm the doctor is unavailable and add a cancellation note:", "Doctor unavailable")?.trim() : undefined;
     if (action === "cancel" && !reason) return;
     if (action === "no-show" && !window.confirm("Mark this patient as a no-show?")) return;
-    const response = await fetch(`/api/appointments/online/${appointment.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
+    const response = await sessionFetch(`/api/appointments/online/${appointment.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, reason }) });
     const data = await response.json();
     if (!response.ok) return setError(data.error || "Could not update appointment.");
     setNotice(action === "no-show" ? "Appointment marked as no-show." : "Appointment cancelled because the doctor is unavailable.");
@@ -77,7 +79,7 @@ export default function FrontDeskSchedule() {
   const checkInOnline = async (dateOfBirth: string, gender: string, vital: VitalInput) => {
     if (!onlineCheckIn) return;
     setError("");
-    const response = await fetch(`/api/appointments/online/${onlineCheckIn.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check-in", dateOfBirth, gender, vital }) });
+    const response = await sessionFetch(`/api/appointments/online/${onlineCheckIn.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check-in", dateOfBirth, gender, vital }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not check in this patient.");
     setOnlineCheckIn(null);
@@ -146,7 +148,7 @@ function AppointmentForm({ date, doctors, onClose, onSaved }: { date: string; do
   const [form, setForm] = useState({ time: "09:00", doctorId: "", appointmentTypeId: "", durationMinutes: "30", reason: "" });
   const selectedDoctor = doctors.find((doctor) => doctor.id === form.doctorId);
   const appointmentTypes = selectedDoctor?.practitionerProfile?.clinic.appointmentTypes || [];
-  useEffect(() => { const timer = setTimeout(async () => { if (query.trim().length < 2) return setPatients([]); const response = await fetch(`/api/patients?q=${encodeURIComponent(query)}`); if (response.ok) setPatients(await response.json()); }, 250); return () => clearTimeout(timer); }, [query]);
-  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); if (!patient) return setError("Select a patient first."); const response = await fetch("/api/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ patientId: patient.id, ...form, contactEmail, scheduledAt: `${date}T${form.time}:00` }) }); const data = await response.json(); if (!response.ok) return setError(data.error || "Could not create appointment."); onSaved(data.notifications); };
+  useEffect(() => { const timer = setTimeout(async () => { if (query.trim().length < 2) return setPatients([]); const response = await sessionFetch(`/api/patients?q=${encodeURIComponent(query)}`); if (response.ok) setPatients(await response.json()); }, 250); return () => clearTimeout(timer); }, [query]);
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(""); if (!patient) return setError("Select a patient first."); const response = await sessionFetch("/api/appointments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ patientId: patient.id, ...form, contactEmail, scheduledAt: `${date}T${form.time}:00` }) }); const data = await response.json(); if (!response.ok) return setError(data.error || "Could not create appointment."); onSaved(data.notifications); };
   return <div className="fixed inset-0 z-20 flex items-start justify-center bg-black/30 px-4 pt-16"><form onSubmit={submit} className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl"><div className="mb-5 flex items-center justify-between"><div className="font-serif text-lg font-semibold">New appointment</div><button type="button" onClick={onClose} aria-label="Close" className="p-1"><X size={18} /></button></div>{error && <div className="mb-3 rounded-lg bg-alertSoft p-2 text-sm text-alert">{error}</div>}<div className="space-y-4"><F label="Patient" required><div className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-3 text-inkSoft" /><input value={patient ? patient.name : query} onChange={(event) => { setPatient(null); setQuery(event.target.value); }} placeholder="Search name, MRN, or phone" className="input input-with-icon" />{patients.length > 0 && !patient && <div className="absolute z-10 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-border bg-card shadow-md">{patients.map((value) => <button type="button" key={value.id} onClick={() => { setPatient(value); setPatients([]); setContactEmail(value.email || ""); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-accentSoft"><b>{value.name}</b> <span className="font-mono text-xs text-inkSoft">{value.mrn}</span></button>)}</div>}</div></F>{patient && <F label="Patient email"><input type="email" value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} placeholder="patient@example.com" className="input" /></F>}<F label="Doctor"><select value={form.doctorId} onChange={(event) => { const doctor = doctors.find((item) => item.id === event.target.value); const appointmentType = doctor?.practitionerProfile?.clinic.appointmentTypes[0]; setForm({ ...form, doctorId: event.target.value, appointmentTypeId: appointmentType?.id || "", durationMinutes: String(appointmentType?.durationMinutes || 30) }); }} className="input"><option value="">Unassigned</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}{doctor.practitionerProfile ? ` · ${doctor.practitionerProfile.clinic.name} / ${doctor.practitionerProfile.specialty}` : ""}</option>)}</select></F>{appointmentTypes.length > 0 && <F label="Appointment type"><select required value={form.appointmentTypeId} onChange={(event) => { const appointmentType = appointmentTypes.find((item) => item.id === event.target.value); setForm({ ...form, appointmentTypeId: event.target.value, durationMinutes: String(appointmentType?.durationMinutes || 30) }); }} className="input">{appointmentTypes.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.durationMinutes} minutes</option>)}</select></F>}<div className="grid grid-cols-2 gap-3"><F label="Time" required><input required type="time" value={form.time} onChange={(event) => setForm({ ...form, time: event.target.value })} className="input" /></F><F label="Duration"><select disabled={appointmentTypes.length > 0} value={form.durationMinutes} onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} className="input"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></F></div><F label="Reason for appointment"><textarea value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} className="input min-h-[70px]" /></F></div><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button><button className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white">Book appointment</button></div><style jsx>{`.input { width: 100%; font-size: 14px; padding: 9px 11px; border-radius: 8px; border: 1px solid #E2DCCE; background: #FCFAF5; } .input-with-icon { padding-left: 2.5rem; }`}</style></form></div>;
 }

@@ -1,8 +1,10 @@
 "use client";
 
+import { sessionFetch, browserSessionPath } from "@/lib/session-scope";
+
 import { signOut, useSession } from "next-auth/react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@/components/SessionNavigation";
+import { usePathname } from "@/components/SessionNavigation";
 import { useEffect, useRef, useState } from "react";
 import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, FlaskConical, FolderOpen, History, Settings, Building2, Check, ChevronDown, LoaderCircle } from "lucide-react";
 import { canDisplayPortalNavigation, PortalArea, roleCanAccessArea } from "@/lib/portal-access";
@@ -21,7 +23,7 @@ export default function NavBar() {
 
   useEffect(() => {
     if (role !== "SUPER_ADMIN") { setOrganizations([]); return; }
-    void fetch("/api/organizations")
+    void sessionFetch("/api/organizations")
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then(setOrganizations)
       .catch(() => setOrganizations([]));
@@ -49,7 +51,7 @@ export default function NavBar() {
     setSwitchingOrganization(true);
     try {
       await update({ activeOrganizationId: nextOrganizationId });
-      window.location.assign("/admin");
+      window.location.assign(browserSessionPath("/admin"));
     } finally {
       setSwitchingOrganization(false);
     }
@@ -135,6 +137,9 @@ export default function NavBar() {
               </div>
             )}
             <span className="text-inkSoft">{session.user?.name} · {role}</span>
+            <a href="/login" target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border px-3 py-1.5 font-semibold text-accentDark">
+              Open another account
+            </a>
             <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-1 text-alert font-semibold">
               <LogOut size={14} /> Sign out
             </button>
