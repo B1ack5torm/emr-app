@@ -137,9 +137,11 @@ export default function NavBar() {
               </div>
             )}
             <span className="text-inkSoft">{session.user?.name} · {role}</span>
-            <a href="/login" target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border px-3 py-1.5 font-semibold text-accentDark">
-              Open another account
-            </a>
+            {role === "SUPER_ADMIN" && (
+              <a href="/login" target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border px-3 py-1.5 font-semibold text-accentDark">
+                Open another account
+              </a>
+            )}
             <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-1 text-alert font-semibold">
               <LogOut size={14} /> Sign out
             </button>

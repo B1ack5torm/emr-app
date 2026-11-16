@@ -1,6 +1,7 @@
 "use client";
 
-import { browserSessionPath } from "@/lib/session-scope";
+import { browserSessionPath, sessionFetch } from "@/lib/session-scope";
+import { defaultPortalPath } from "@/lib/portal-access";
 
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
@@ -29,12 +30,22 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await signIn("credentials", { email, password, redirect: false });
-    setLoading(false);
-    if (res?.error) {
-      setError(res.error === "CredentialsSignin" ? "Invalid email or password." : res.error);
-    } else {
-      window.location.assign(browserSessionPath("/"));
+    try {
+      const res = await signIn("credentials", { email, password, redirect: false, callbackUrl: browserSessionPath("/") });
+      if (!res?.ok || res.error) {
+        throw new Error(res?.error === "CredentialsSignin" ? "Invalid email or password." : res?.error || "Could not sign in. Please try again.");
+      }
+      // Confirm this namespace received its cookie before leaving the form.
+      const response = await sessionFetch("/api/auth/session", { cache: "no-store" });
+      const session = await response.json();
+      if (!response.ok || !session?.user?.id || session.user.accountActive === false) {
+        throw new Error("Your sign-in session could not be established. Please try again.");
+      }
+      window.location.assign(browserSessionPath(session.user.mustChangePassword ? "/change-password" : defaultPortalPath(session.user.role)));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not sign in. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
