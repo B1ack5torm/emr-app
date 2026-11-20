@@ -105,6 +105,14 @@ Apply committed migrations in a deployed environment with `npx prisma migrate de
 
 `DATABASE_URL`, `NEXTAUTH_SECRET`, and notification settings are documented in `.env.example`. Keep `.env` out of source control. Default scheduling display is Asia/Kolkata, while database timestamps are stored in UTC.
 
+### Grafana Cloud Logs
+
+CareChart can send predefined operational events for public booking transaction errors, staff invite email failures, and imaging transmission failures or rejections. The events contain a name and severity. Request data, patient and staff identifiers, clinical content, raw errors, and audit records are excluded from the export. The app posts each event over HTTPS with a one-second timeout and writes the same event to the server console.
+
+1. In the Grafana Cloud Portal, open your stack and select **Loki → Details**. Copy the Loki URL and **User** value. Create a Cloud Access Policy token scoped to that stack with `logs:write`. [Grafana credential setup](https://grafana.com/docs/grafana-cloud/platform/security-and-account-management/security-and-access/authentication-and-permissions/access-policies/manage-cloud-data-source-credentials/)
+2. Set `GRAFANA_LOKI_URL`, `GRAFANA_LOKI_USER`, and `GRAFANA_LOKI_TOKEN` in `.env` for local testing. Set the same variables in your hosting environment and redeploy to enable delivery there. Treat the token as a server-side secret.
+3. Run `npm run test:grafana-logs` locally to send a synthetic event. In **Grafana → Explore**, select your stack's Loki data source and run `{service_name="carechart-emr"} | json | event="grafana_connection_test"` over the last 15 minutes. Use `{service_name="carechart-emr"} | json | level="error"` to find failures.
+
 ### Local imaging worklist test
 
 Set `MLLP_HOST=127.0.0.1` and `MLLP_PORT=2575`, then start the local receiver with `npm run mllp:mock`. It stores each correctly framed ORM message under `storage/mllp-mock` and returns `AA` by default. Set `MOCK_MLLP_ACK_CODE` to `AE` or `AR` to exercise failure handling; raw HL7 is stored but never printed to the terminal.

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "tsx --test tests/*.test.ts",
+    "test:grafana-logs": "tsx --env-file=.env scripts/test-grafana-logs.ts",
     "test:integration": "tsx --env-file=.env --test tests/database.integration.ts",
     "bootstrap:super-admin": "tsx --env-file=.env scripts/bootstrap-super-admin.ts",
     "mllp:mock": "tsx scripts/mock-mllp-receiver.ts",

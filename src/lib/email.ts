@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendInviteEmail(to: string, orgName: string, role: string, acceptUrl: string) {
   const roleLabel = role === "DOCTOR" ? "Doctor" : role === "ADMIN" ? "Admin" : "Front Desk";
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: process.env.EMAIL_FROM || "CareChart <onboarding@resend.dev>",
     to,
     subject: `You've been invited to join ${orgName} on CareChart`,
@@ -17,6 +17,7 @@ export async function sendInviteEmail(to: string, orgName: string, role: string,
       </div>
     `,
   });
+  if (error) throw new Error("Invite email delivery failed.");
 }
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {

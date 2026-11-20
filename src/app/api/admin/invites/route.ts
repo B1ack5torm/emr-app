@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
 import crypto from "crypto";
 import { requirePermission } from "@/lib/security";
+import { logOperationalEvent } from "@/lib/operational-logging";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,8 @@ export async function POST(req: NextRequest) {
 
   try {
     await sendInviteEmail(email, org!.name, role, acceptUrl);
-  } catch (e) {
-    console.error("Failed to send invite email:", e);
+  } catch {
+    await logOperationalEvent("staff_invite_email_failed");
     return NextResponse.json({ error: "Invite created but the email failed to send. Check your Resend setup." }, { status: 502 });
   }
 

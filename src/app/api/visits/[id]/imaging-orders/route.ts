@@ -3,6 +3,7 @@ import type { ImagingModality } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildORM } from "@/lib/hl7";
 import { parseAck, sendHL7ViaMLLP } from "@/lib/mllp";
+import { logOperationalEvent } from "@/lib/operational-logging";
 import { canCreateOperationalImagingOrder, imagingOrderStatusForAck, isActiveImagingOrderEncounter, newAccessionNumber, newMessageControlId, validateImagingOrderInput } from "@/lib/domain/imaging-orders";
 import { audit, requirePermission } from "@/lib/security";
 
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const errorMessage = "MLLP_HOST / MLLP_PORT not configured.";
     const failed = await prisma.imagingOrder.update({ where: { id: order.id }, data: { status: "FAILED", hl7Sent: hl7Message, errorMessage } });
     await audit({ organizationId: user.organizationId, userId: user.id, patientId: visit.patientId, action: "IMAGING_ORDER_TRANSMISSION_FAILED", resourceType: "ImagingOrder", resourceId: order.id, newValue: { status: "FAILED", accepted: false }, reason: errorMessage, request: req });
+    await logOperationalEvent("imaging_endpoint_unconfigured");
     return NextResponse.json({ order: failed, warning: "Order saved, but no MLLP endpoint is configured." }, { status: 201 });
   }
 
@@ -124,6 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       newValue: { status: updated.status, ackCode: ack.code, accepted, sentAt: recordedSentAt.toISOString() },
       request: req,
     });
+    if (!accepted) await logOperationalEvent("imaging_transmission_rejected");
     return NextResponse.json({ order: updated }, { status: 201 });
   } catch (reason) {
     const errorMessage = operationalError(reason);
@@ -132,6 +135,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { status: "FAILED", hl7Sent: hl7Message, hl7AckReceived: rawAck, errorMessage, ...(transmission.sentAt ? { sentAt: transmission.sentAt } : {}) },
     });
     await audit({ organizationId: user.organizationId, userId: user.id, patientId: visit.patientId, action: "IMAGING_ORDER_TRANSMISSION_FAILED", resourceType: "ImagingOrder", resourceId: order.id, newValue: { status: "FAILED", accepted: false, sentAt: transmission.sentAt?.toISOString() || null }, reason: errorMessage, request: req });
+    await logOperationalEvent("imaging_transmission_failed");
     return NextResponse.json({ order: failed, error: errorMessage }, { status: 502 });
   }
 }

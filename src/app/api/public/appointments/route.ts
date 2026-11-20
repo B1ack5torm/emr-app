@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { slotsOverlap } from "@/lib/domain/appointments";
 import { normalizeHospitalSlug } from "@/lib/domain/public-booking";
 import { isTimeWithinWorkingPeriods } from "@/lib/domain/scheduling";
+import { logOperationalEvent } from "@/lib/operational-logging";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ bookingReference: appointmentRequest.bookingReference, status: appointmentRequest.status }, { status: 201 });
   } catch (error) {
     if ((error instanceof Error && error.message === "SLOT_TAKEN") || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")) return NextResponse.json({ error: "That time was just requested. Please choose another slot." }, { status: 409 });
+    await logOperationalEvent("public_booking_transaction_failed");
     throw error;
   }
 }
