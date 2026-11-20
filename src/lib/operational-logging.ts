@@ -44,12 +44,13 @@ export async function logOperationalEvent(event: OperationalEvent): Promise<Deli
 
   try {
     const authorization = Buffer.from(`${user}:${token}`, "utf8").toString("base64");
+    const environment = process.env.VERCEL_ENV || process.env.GRAFANA_LOG_ENVIRONMENT?.trim() || process.env.NODE_ENV || "development";
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { Authorization: `Basic ${authorization}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         streams: [{
-          stream: { service_name: "carechart-emr", environment: process.env.NODE_ENV || "development" },
+          stream: { service_name: "carechart-emr", environment },
           values: [[`${Date.now()}000000`, line]],
         }],
       }),
