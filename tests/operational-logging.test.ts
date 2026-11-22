@@ -57,7 +57,7 @@ test("uses the Vercel deployment environment even when a local label is configur
   assert.equal(streams[0].stream.environment, "production");
 });
 
-test("mirrors only the recorded timestamp and safe audit fields", async (context) => {
+test("mirrors the recorded timestamp, resource, user, and exact reason without unrelated audit fields", async (context) => {
   configureLoki(context, settings.GRAFANA_LOKI_URL);
   const send = context.mock.method(globalThis, "fetch", async () => new Response(null, { status: 204 }));
   const savedEvent = {
@@ -69,27 +69,52 @@ test("mirrors only the recorded timestamp and safe audit fields", async (context
     userId: "private-user-id",
     patientId: "private-patient-id",
     resourceId: "private-resource-id",
-    reason: "private free-text reason",
+    reason: 'Free-text reason with "quotes" and a newline\nSecond line.',
     newValue: { notes: "private notes" },
   };
 
   assert.equal(await logAuditEvent(savedEvent), "sent");
   const [, request] = send.mock.calls[0].arguments;
   const { streams } = JSON.parse(String(request?.body));
-  assert.deepEqual(streams, [{
-    stream: { service_name: "carechart-emr", environment: "local", log_type: "audit" },
-    values: [[`${savedEvent.createdAt.getTime()}000000`, '{"action":"PATIENT_VIEWED","resource_type":"Patient"}']],
-  }]);
+  assert.equal(streams.length, 1);
+  assert.deepEqual(streams[0].stream, { service_name: "carechart-emr", environment: "local", log_type: "audit" });
+  assert.equal(streams[0].values.length, 1);
+  const [timestamp, line] = streams[0].values[0];
+  assert.equal(timestamp, `${savedEvent.createdAt.getTime()}000000`);
+  assert.deepEqual(JSON.parse(line), {
+    action: "PATIENT_VIEWED",
+    resource_type: "Patient",
+    resource_id: savedEvent.resourceId,
+    user_id: savedEvent.userId,
+    reason: savedEvent.reason,
+  });
+});
+
+test("preserves missing audit details as null", async (context) => {
+  configureLoki(context, settings.GRAFANA_LOKI_URL);
+  const send = context.mock.method(globalThis, "fetch", async () => new Response(null, { status: 204 }));
+
+  assert.equal(await logAuditEvent({
+    action: "DIAGNOSTIC_ORDER_SETTINGS_UPDATED", resourceType: "Organization", resourceId: null,
+    userId: null, reason: null, createdAt: new Date(),
+  }), "sent");
+  const [, request] = send.mock.calls[0].arguments;
+  const { streams } = JSON.parse(String(request?.body));
+  const [, line] = streams[0].values[0];
+  assert.deepEqual(JSON.parse(line), {
+    action: "DIAGNOSTIC_ORDER_SETTINGS_UPDATED", resource_type: "Organization", resource_id: null,
+    user_id: null, reason: null,
+  });
 });
 
 test("skips unexpected audit actions and resource types", async (context) => {
   configureLoki(context, settings.GRAFANA_LOKI_URL);
   const send = context.mock.method(globalThis, "fetch");
-  const createdAt = new Date();
+  const details = { createdAt: new Date(), resourceId: null, userId: null, reason: null };
 
-  assert.equal(await logAuditEvent({ action: "UNREVIEWED_ACTION", resourceType: "User", createdAt }), "skipped");
-  assert.equal(await logAuditEvent({ action: "LOGIN_SUCCEEDED", resourceType: "Patient", createdAt }), "skipped");
-  assert.equal(await logAuditEvent({ action: "LOGIN_SUCCEEDED", resourceType: "constructor", createdAt }), "skipped");
+  assert.equal(await logAuditEvent({ ...details, action: "UNREVIEWED_ACTION", resourceType: "User" }), "skipped");
+  assert.equal(await logAuditEvent({ ...details, action: "LOGIN_SUCCEEDED", resourceType: "Patient" }), "skipped");
+  assert.equal(await logAuditEvent({ ...details, action: "LOGIN_SUCCEEDED", resourceType: "constructor" }), "skipped");
   assert.equal(send.mock.callCount(), 0);
 });
 

@@ -3,7 +3,14 @@ import { waitUntil } from "@vercel/functions";
 import { logAuditEvent } from "./operational-logging";
 import { prisma } from "./prisma";
 
-export const auditLogFields = { action: true, resourceType: true, createdAt: true } as const satisfies Prisma.AuditEventSelect;
+export const auditLogFields = {
+  action: true,
+  resourceType: true,
+  resourceId: true,
+  userId: true,
+  reason: true,
+  createdAt: true,
+} as const satisfies Prisma.AuditEventSelect;
 
 export async function recordAuditEvent(data: Prisma.AuditEventUncheckedCreateInput) {
   const savedEvent = await prisma.auditEvent.create({ data, select: auditLogFields });

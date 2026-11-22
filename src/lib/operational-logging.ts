@@ -57,15 +57,19 @@ const auditActions: Record<string, readonly string[]> = {
   FLAG: ["FLAG_RECORDED", "FLAG_STATUS_CHANGED"],
 };
 
-export async function logAuditEvent({ action, resourceType, createdAt }: {
+export async function logAuditEvent({ action, resourceType, resourceId, userId, reason, createdAt }: {
   action: string;
   resourceType: string;
+  resourceId: string | null;
+  userId: string | null;
+  reason: string | null;
   createdAt: Date;
 }): Promise<DeliveryStatus | "skipped"> {
   if (!Object.hasOwn(auditActions, resourceType) || !auditActions[resourceType].includes(action)) return "skipped";
   const timestamp = createdAt.getTime();
   if (!Number.isFinite(timestamp)) return "skipped";
-  return pushLog(JSON.stringify({ action, resource_type: resourceType }), timestamp, "audit");
+  const line = JSON.stringify({ action, resource_type: resourceType, resource_id: resourceId, user_id: userId, reason });
+  return pushLog(line, timestamp, "audit");
 }
 
 async function pushLog(line: string, timestamp: number, logType?: "audit"): Promise<DeliveryStatus> {
