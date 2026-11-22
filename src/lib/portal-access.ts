@@ -7,7 +7,6 @@ export type PortalArea =
   | "billing"
   | "diagnostics"
   | "documents"
-  | "audit"
   | "settings";
 
 const rolesByArea: Record<PortalArea, readonly string[]> = {
@@ -19,7 +18,6 @@ const rolesByArea: Record<PortalArea, readonly string[]> = {
   billing: ["RECEPTION", "BILLING", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
   diagnostics: ["DOCTOR", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
   documents: ["DOCTOR", "NURSE", "RECEPTION", "FRONT_DESK", "LAB_RADIOLOGY", "ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
-  audit: ["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
   settings: ["ADMIN", "CLINIC_ADMIN", "SUPER_ADMIN"],
 };
 

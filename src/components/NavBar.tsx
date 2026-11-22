@@ -6,7 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "@/components/SessionNavigation";
 import { usePathname } from "@/components/SessionNavigation";
 import { useEffect, useRef, useState } from "react";
-import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, FlaskConical, FolderOpen, History, Settings, Building2, Check, ChevronDown, LoaderCircle } from "lucide-react";
+import { Stethoscope, ClipboardList, FileText, LogOut, ShieldCheck, Receipt, FlaskConical, FolderOpen, Settings, Building2, Check, ChevronDown, LoaderCircle } from "lucide-react";
 import { canDisplayPortalNavigation, PortalArea, roleCanAccessArea } from "@/lib/portal-access";
 
 export default function NavBar() {
@@ -68,7 +68,6 @@ export default function NavBar() {
     { area: "billing", href: "/billing", label: "Billing", icon: <Receipt size={15} /> },
     { area: "diagnostics", href: "/diagnostics", label: "Diagnostics", icon: <FlaskConical size={15} /> },
     { area: "documents", href: "/documents", label: "Documents", icon: <FolderOpen size={15} /> },
-    { area: "audit", href: "/audit", label: "Audit", icon: <History size={15} /> },
     { area: "settings", href: "/settings", label: "Settings", icon: <Settings size={15} /> },
   ];
 
