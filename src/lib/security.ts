@@ -1,6 +1,7 @@
 import { getServerSession } from "@/lib/server-session";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { recordAuditEvent } from "@/lib/audit-events";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 
@@ -98,5 +99,5 @@ export function requestContext(request?: NextRequest) {
 /** Metadata must be small, non-sensitive operational fields; never pass credentials or clinical note bodies. */
 export async function audit(input: { organizationId: string; userId?: string; patientId?: string; action: string; resourceType: string; resourceId?: string; previousValue?: object; newValue?: object; reason?: string; request?: NextRequest }) {
   const { request, ...event } = input;
-  await prisma.auditEvent.create({ data: { ...event, ...requestContext(request) } });
+  await recordAuditEvent({ ...event, ...requestContext(request) });
 }

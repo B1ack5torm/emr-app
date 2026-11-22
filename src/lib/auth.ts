@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { auditLogFields, mirrorAuditEvent, recordAuditEvent } from "@/lib/audit-events";
 import { createHash } from "crypto";
 import { scopePath, sessionCookieName, sessionPrefix } from "@/lib/session-scope";
 
@@ -45,21 +46,22 @@ export const authOptions: NextAuthOptions = {
         const valid = await bcrypt.compare(credentials.password, user?.passwordHash || DUMMY_PASSWORD_HASH);
         if (!user || !valid) {
           await prisma.loginAttempt.create({ data: { organizationId: user?.organizationId, userId: user?.id, identityHash, ipHash, reason: "INVALID_CREDENTIALS" } });
-          if (user) await prisma.auditEvent.create({ data: { organizationId: user.organizationId, userId: user.id, action: "LOGIN_FAILED", resourceType: "User", resourceId: user.id, reason: "INVALID_CREDENTIALS" } });
+          if (user) await recordAuditEvent({ organizationId: user.organizationId, userId: user.id, action: "LOGIN_FAILED", resourceType: "User", resourceId: user.id, reason: "INVALID_CREDENTIALS" });
           return null;
         }
 
         if (user.status !== "ACTIVE") {
           await prisma.loginAttempt.create({ data: { organizationId: user.organizationId, userId: user.id, identityHash, ipHash, reason: `ACCOUNT_${user.status}` } });
-          await prisma.auditEvent.create({ data: { organizationId: user.organizationId, userId: user.id, action: "LOGIN_FAILED", resourceType: "User", resourceId: user.id, reason: `ACCOUNT_${user.status}` } });
+          await recordAuditEvent({ organizationId: user.organizationId, userId: user.id, action: "LOGIN_FAILED", resourceType: "User", resourceId: user.id, reason: `ACCOUNT_${user.status}` });
           throw new Error("This account is not active. Contact your clinic administrator.");
         }
 
-        await prisma.$transaction([
+        const [, , loginEvent] = await prisma.$transaction([
           prisma.loginAttempt.create({ data: { organizationId: user.organizationId, userId: user.id, identityHash, ipHash, succeeded: true } }),
           prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }),
-          prisma.auditEvent.create({ data: { organizationId: user.organizationId, userId: user.id, action: "LOGIN_SUCCEEDED", resourceType: "User", resourceId: user.id } }),
+          prisma.auditEvent.create({ data: { organizationId: user.organizationId, userId: user.id, action: "LOGIN_SUCCEEDED", resourceType: "User", resourceId: user.id }, select: auditLogFields }),
         ]);
+        await mirrorAuditEvent(loginEvent);
 
         return {
           id: user.id,
@@ -135,16 +137,14 @@ export const authOptions: NextAuthOptions = {
         token.mustChangePassword = currentUser.mustChangePassword;
 
         if (trigger === "update" && currentUser.role === "SUPER_ADMIN" && previousOrganizationId !== activeOrganizationId) {
-          await prisma.auditEvent.create({
-            data: {
-              organizationId: activeOrganizationId,
-              userId: currentUser.id,
-              action: "ACTIVE_HOSPITAL_CHANGED",
-              resourceType: "Organization",
-              resourceId: activeOrganizationId,
-              previousValue: previousOrganizationId ? { organizationId: previousOrganizationId } : undefined,
-              newValue: { organizationId: activeOrganizationId },
-            },
+          await recordAuditEvent({
+            organizationId: activeOrganizationId,
+            userId: currentUser.id,
+            action: "ACTIVE_HOSPITAL_CHANGED",
+            resourceType: "Organization",
+            resourceId: activeOrganizationId,
+            previousValue: previousOrganizationId ? { organizationId: previousOrganizationId } : undefined,
+            newValue: { organizationId: activeOrganizationId },
           });
         }
       }
@@ -166,7 +166,7 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signOut({ token }) {
       if (!token?.organizationId || !token?.id) return;
-      await prisma.auditEvent.create({ data: { organizationId: String(token.organizationId), userId: String(token.id), action: "LOGOUT", resourceType: "User", resourceId: String(token.id) } });
+      await recordAuditEvent({ organizationId: String(token.organizationId), userId: String(token.id), action: "LOGOUT", resourceType: "User", resourceId: String(token.id) });
     },
   },
 };

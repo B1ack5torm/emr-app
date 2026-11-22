@@ -107,11 +107,15 @@ Apply committed migrations in a deployed environment with `npx prisma migrate de
 
 ### Grafana Cloud Logs
 
-CareChart can send predefined operational events for public booking transaction errors, staff invite email failures, and imaging transmission failures or rejections. The events contain a name and severity. Request data, patient and staff identifiers, clinical content, raw errors, and audit records are excluded from the export. The app posts each event over HTTPS with a one-second timeout and writes the same event to the server console.
+CareChart can send predefined operational events for public booking transaction errors, staff invite email failures, and imaging transmission failures or rejections. The operational events contain a name and severity, and are also written to the server console. The app posts log events over HTTPS with a one-second timeout.
 
 1. In the Grafana Cloud Portal, open your stack and select **Loki → Details**. Copy the Loki URL and **User** value. Create separate local and production tokens under a stack access policy with `logs:write`. [Grafana access policies and tokens](https://grafana.com/docs/grafana-cloud/platform/security-and-account-management/security-and-access/authentication-and-permissions/access-policies/create-access-policies/)
 2. Set `GRAFANA_LOKI_URL`, `GRAFANA_LOKI_USER`, `GRAFANA_LOKI_TOKEN` (the local token), and `GRAFANA_LOG_ENVIRONMENT="local"` in `.env`. In Vercel, save the Loki URL, user, and production token for **Production**, then redeploy. The `VERCEL_ENV` system variable supplies the deployed environment label. On other hosts, set `GRAFANA_LOG_ENVIRONMENT="production"` explicitly.
 3. Run `npm run test:grafana-logs` locally to send a synthetic event. In **Grafana → Explore**, select your stack's Loki data source and run `{service_name="carechart-emr", environment="local"} | json | event="grafana_connection_test"` over the last 15 minutes. Use `{service_name="carechart-emr", environment="production"}` to view production logs.
+
+CareChart also mirrors new audit events to Loki once their database writes commit. The mirror includes only the recorded time, allowlisted action, and resource type. CareChart’s organization-scoped Audit page retains the complete record, including identifiers, reasons, and change details. Grafana delivery is best effort. Existing audit history stays in CareChart, and a Grafana outage leaves the database audit record available.
+
+To see audit activity in Explore, run `{service_name="carechart-emr", environment="production", log_type="audit"} | json`. Set `environment="local"` for local activity, or add `| action="LOGIN_SUCCEEDED"` to show only successful staff sign-ins.
 
 ### Local imaging worklist test
 

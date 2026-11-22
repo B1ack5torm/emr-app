@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server-session";
 import { authOptions } from "@/lib/auth";
+import { auditLogFields, mirrorAuditEvent } from "@/lib/audit-events";
 import { prisma } from "@/lib/prisma";
 import { audit, requirePermission } from "@/lib/security";
 import bcrypt from "bcryptjs";
@@ -28,11 +29,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     const changedAt = new Date();
     const passwordHash = await bcrypt.hash(password, 12);
-    await prisma.$transaction(async (tx) => {
+    const resetEvent = await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: target.id }, data: { passwordHash, mustChangePassword: true, passwordChangedAt: changedAt } });
       await tx.passwordResetToken.updateMany({ where: { userId: target.id, usedAt: null }, data: { usedAt: changedAt } });
-      await tx.auditEvent.create({ data: { organizationId: target.organizationId, userId: access.user.id, action: "ADMIN_PASSWORD_RESET", resourceType: "User", resourceId: target.id, newValue: { mustChangePassword: true } } });
+      return tx.auditEvent.create({ data: { organizationId: target.organizationId, userId: access.user.id, action: "ADMIN_PASSWORD_RESET", resourceType: "User", resourceId: target.id, newValue: { mustChangePassword: true } }, select: auditLogFields });
     });
+    await mirrorAuditEvent(resetEvent);
     return NextResponse.json({ success: true, message: "Temporary password saved. The user must change it at their next sign-in." });
   }
 
