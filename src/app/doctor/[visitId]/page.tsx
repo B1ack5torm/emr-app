@@ -7,6 +7,7 @@ import { useRouter } from "@/components/SessionNavigation";
 import { useSession } from "next-auth/react";
 import { Plus, X, Pill, FlaskConical, CheckCircle2, ArrowLeft, Printer, ScanLine } from "lucide-react";
 import { F, AllergyBanner } from "@/components/shared";
+import PatientHistory from "./PatientHistory";
 
 type SafetyWarning = { index: number; code: "ALLERGY" | "DUPLICATE_THERAPY" | "INTERACTION"; severity: string; message: string };
 type Rx = { medicine: string; dosage: string; frequency: string; duration: string; allergyWarningAcknowledged?: boolean; interactionOverrideReason?: string; safetyWarnings?: SafetyWarning[] };
@@ -15,9 +16,14 @@ type ImagingRecommendation = { code: string; name: string; modality: string; bod
 type ImagingCatalogOption = ImagingRecommendation & { aliases: string[] };
 
 export default function ConsultPage({ params }: { params: { visitId: string } }) {
+  return <ConsultationForm key={params.visitId} visitId={params.visitId} />;
+}
+
+function ConsultationForm({ visitId }: { visitId: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [visit, setVisit] = useState<any>(null);
+  const [loadError, setLoadError] = useState(false);
   const [notes, setNotes] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [advice, setAdvice] = useState("");
@@ -34,10 +40,13 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   const [showImagingSuggestions, setShowImagingSuggestions] = useState(false);
   const [signConfirmed, setSignConfirmed] = useState(false);
   const [error, setError] = useState("");
-  const [pastVisits, setPastVisits] = useState<any[]>([]);
 
   useEffect(() => {
-    sessionFetch(`/api/visits/${params.visitId}`).then((r) => r.json()).then((v) => {
+    const controller = new AbortController();
+    sessionFetch(`/api/visits/${visitId}`, { signal: controller.signal }).then((response) => {
+      if (!response.ok) throw new Error("Could not load the consultation.");
+      return response.json();
+    }).then((v) => {
       setVisit(v);
       setNotes(v.doctorNotes || "");
       setDiagnosis(v.diagnosis || "");
@@ -45,11 +54,11 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
       setRx(v.prescriptions?.length ? v.prescriptions : []);
       setTests((v.testsOrdered || []).map((t: any) => t.name));
       setImagingRecommendations(v.imagingRecommendations || []);
-      sessionFetch(`/api/patients/${v.patientId}`).then((r) => r.json()).then((p) => {
-        setPastVisits((p.visits || []).filter((pv: any) => pv.id !== v.id && pv.status === "COMPLETED"));
-      });
+    }).catch(() => {
+      if (!controller.signal.aborted) setLoadError(true);
     });
-  }, [params.visitId]);
+    return () => controller.abort();
+  }, [visitId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +84,11 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     return () => { cancelled = true; };
   }, []);
 
-  if (!visit) return <div className="text-inkSoft">Loading chart…</div>;
+  if (loadError) return <div className="space-y-2">
+    <p role="alert" className="text-alert">Could not load the consultation.</p>
+    <button type="button" onClick={() => router.push("/doctor")} className="text-sm font-semibold text-accentDark underline">Back to queue</button>
+  </div>;
+  if (!visit) return <div role="status" className="text-inkSoft">Loading chart…</div>;
 
   const addRx = () => setRx([...rx, { medicine: "", dosage: "", frequency: "", duration: "" }]);
   const updateRx = (i: number, field: keyof Rx, val: any) => setRx(rx.map((r, idx) => (idx === i ? { ...r, [field]: val } : r)));
@@ -125,7 +138,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
     if (complete && !signConfirmed) { setError("Please confirm the digital signature before completing the visit."); return; }
     const finalTests = testDraft.trim() ? [...tests, testDraft.trim()] : tests;
     const finalImaging = imagingDraft.trim() ? [...imagingRecommendations, { code: "", name: imagingDraft.trim(), modality: "Other", description: `${imagingDraft.trim()} — clinician-entered imaging request.` }] : imagingRecommendations;
-    const res = await sessionFetch(`/api/visits/${params.visitId}`, {
+    const res = await sessionFetch(`/api/visits/${visitId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ diagnosis, doctorNotes: notes, advice, prescriptions: rx, testsOrdered: finalTests, imagingRecommendations: finalImaging, complete }),
     });
@@ -157,7 +170,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
   return (
     <div>
       <div className="consult-screen">
-      <div className="flex justify-between items-start mb-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="font-serif text-xl font-semibold">{visit.patient.name}</div>
           <div className="text-xs text-inkSoft">
@@ -165,7 +178,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             {visit.patient.dateOfBirth ? ` · DOB ${new Date(visit.patient.dateOfBirth).toLocaleDateString()}` : ""}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={printReport} className="flex items-center gap-1 text-sm text-white bg-accent rounded-lg px-3 py-1.5"><Printer size={14} /> Print report</button>
           <button onClick={() => router.push("/doctor")} className="flex items-center gap-1 text-sm text-accentDark border border-border rounded-lg px-3 py-1.5"><ArrowLeft size={14} /> Back to queue</button>
         </div>
@@ -175,24 +188,14 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
 
       <AllergyBanner allergies={visit.patient.allergies.map((a: any) => a.name)} />
 
-      <div className="grid grid-cols-2 gap-3 mt-4 bg-card border border-border rounded-lg p-3.5 text-sm">
+      <a href="#patient-history-title" className="mt-3 inline-block text-sm font-semibold text-accentDark underline lg:hidden">View patient history</a>
+
+      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,30%)]">
+      <div className="min-w-0">
+      <div className="grid gap-3 bg-card border border-border rounded-lg p-3.5 text-sm sm:grid-cols-2">
         <div><b>Chief complaint:</b> {visit.chiefComplaint || "—"}</div>
         <div><b>Vitals:</b> BP {visit.bp || "—"}, Temp {visit.temperature || "—"}°C, Pulse {visit.pulse || "—"}, Wt {visit.weight || "—"}kg</div>
       </div>
-
-      {pastVisits.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-sm font-semibold text-accentDark">View {pastVisits.length} previous visit{pastVisits.length > 1 ? "s" : ""}</summary>
-          <div className="flex flex-col gap-2 mt-2">
-            {pastVisits.map((v: any) => (
-              <div key={v.id} className="text-xs bg-[#FAF8F2] border border-border rounded-lg p-2.5">
-                <div className="text-inkSoft mb-1">{new Date(v.createdAt).toLocaleString()} · Dr. {v.doctor?.name}</div>
-                <div><b>Diagnosis:</b> {v.diagnosis || "—"}</div>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
 
       <div className="flex flex-col gap-4 mt-5">
         <F label="Examination notes / doctor's feedback">
@@ -206,7 +209,7 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
           <div className="flex flex-col gap-2">
             {rx.map((r, i) => (
               <div key={i} className="rounded-lg border border-transparent has-[.safety-warning]:border-alert has-[.safety-warning]:bg-alertSoft p-1">
-              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-2 items-center">
+              <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]">
                 <input placeholder="Medicine name" value={r.medicine} onChange={(e) => updateRx(i, "medicine", e.target.value)} className="input" />
                 <input placeholder="Dosage" value={r.dosage} onChange={(e) => updateRx(i, "dosage", e.target.value)} className="input" />
                 <input placeholder="Frequency" value={r.frequency} onChange={(e) => updateRx(i, "frequency", e.target.value)} className="input" />
@@ -293,11 +296,14 @@ export default function ConsultPage({ params }: { params: { visitId: string } })
             I confirm this consultation record is accurate and digitally sign it.
           </label>
           {error && <div className="text-alert text-sm mt-2">{error}</div>}
-          <div className="flex gap-2.5 mt-4 justify-end">
+          <div className="mt-4 flex flex-wrap justify-end gap-2.5">
             <button onClick={() => save(false)} className="text-sm text-accentDark border border-border rounded-lg px-4 py-2.5 font-semibold">Save draft</button>
             <button onClick={() => save(true)} className="flex items-center gap-2 bg-accent text-white rounded-lg px-4 py-2.5 font-semibold text-sm"><CheckCircle2 size={15} /> Complete &amp; sign visit</button>
           </div>
         </div>
+      </div>
+      </div>
+      <PatientHistory visitId={visitId} />
       </div>
       </div>
       <PatientReport visit={visit} notes={notes} diagnosis={diagnosis} advice={advice} prescriptions={rx} tests={tests} imagingRecommendations={imagingRecommendations} doctorName={visit.doctor?.name || session?.user?.name || ""} signed={completed} />
